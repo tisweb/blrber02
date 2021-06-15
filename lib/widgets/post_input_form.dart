@@ -4211,7 +4211,7 @@ class _PostInputFormState extends State<PostInputForm>
         querySnapshot.docs.forEach((document) {
           batch.delete(document.reference);
         });
-        //git check
+        //git check - master
         print('delete product3');
         return batch.commit().catchError((error) =>
             print("Failed to delete products in ProdImages: $error"));
