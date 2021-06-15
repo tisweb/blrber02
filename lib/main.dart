@@ -31,6 +31,7 @@ import './models/user_detail.dart';
 import './provider/get_current_location.dart';
 import './provider/google_sign_in.dart';
 
+// change1
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
