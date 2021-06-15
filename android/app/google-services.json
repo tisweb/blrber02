@@ -1,0 +1,142 @@
+{
+  "project_info": {
+    "project_number": "158627259857",
+    "project_id": "adder-a52de",
+    "storage_bucket": "adder-a52de.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:158627259857:android:6f2263c5d99dbca60becf0",
+        "android_client_info": {
+          "package_name": "com.example.new_chat_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "158627259857-p0beehck0ftudogh6aj7lhj9b8r3fgd6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.new_chat_app",
+            "certificate_hash": "0f28a6302330a3f8e7ab0265400e385a0df83424"
+          }
+        },
+        {
+          "client_id": "158627259857-89nbf8mg6t0gfrc1568jiaul1la31040.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCyJ9N25tbjvhxR3QMRvoiqHQqqa0QrHGk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "158627259857-89nbf8mg6t0gfrc1568jiaul1la31040.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "158627259857-0lg9herft8441n3ie0jg2ob82nee4jrs.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.nwsApp2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:158627259857:android:f0e4fcc4b2fb1b930becf0",
+        "android_client_info": {
+          "package_name": "com.example.nws_app2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "158627259857-nul2bj6n3ajbu43cmu25r2s30qoohq6j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.nws_app2",
+            "certificate_hash": "0f424c1dd47a385e09960fd891f1ae8fd1f7b31b"
+          }
+        },
+        {
+          "client_id": "158627259857-89nbf8mg6t0gfrc1568jiaul1la31040.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCyJ9N25tbjvhxR3QMRvoiqHQqqa0QrHGk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "158627259857-89nbf8mg6t0gfrc1568jiaul1la31040.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "158627259857-0lg9herft8441n3ie0jg2ob82nee4jrs.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.nwsApp2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:158627259857:android:fb695a4702b7fa3a0becf0",
+        "android_client_info": {
+          "package_name": "com.newworkspaceproduction.blrber"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "158627259857-uf26bnthov2ir71lmts7hqduh3ruhueq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.newworkspaceproduction.blrber",
+            "certificate_hash": "0f28a6302330a3f8e7ab0265400e385a0df83424"
+          }
+        },
+        {
+          "client_id": "158627259857-89nbf8mg6t0gfrc1568jiaul1la31040.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCyJ9N25tbjvhxR3QMRvoiqHQqqa0QrHGk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "158627259857-89nbf8mg6t0gfrc1568jiaul1la31040.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "158627259857-0lg9herft8441n3ie0jg2ob82nee4jrs.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.nwsApp2"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
