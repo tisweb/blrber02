@@ -5,6 +5,7 @@ class UserDetail {
   String email;
   String userImageUrl;
   String displayName;
+  String providerId;
   String addressLocation;
   String countryCode;
   String buyingCountryCode;
@@ -23,6 +24,7 @@ class UserDetail {
     this.email,
     this.userImageUrl,
     this.displayName,
+    this.providerId,
     this.addressLocation,
     this.countryCode,
     this.buyingCountryCode,

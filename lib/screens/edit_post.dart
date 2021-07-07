@@ -1,4 +1,10 @@
+//Imports for pubspec Packages
 import 'package:flutter/material.dart';
+
+//Imports for Constants
+import '../constants.dart';
+
+//Imports for Widgets
 import '../widgets/post_input_form.dart';
 
 class EditPost extends StatefulWidget {
@@ -16,15 +22,15 @@ class _EditPostState extends State<EditPost> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.of(context).pop();
           },
         ),
-        title: Text(
+        title: const Text(
           'Edit Post',
         ),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: bPrimaryColor,
       ),
       body: Container(
         child: PostInputForm(

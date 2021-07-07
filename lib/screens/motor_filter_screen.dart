@@ -1,16 +1,31 @@
-import 'package:blrber/models/category.dart';
-import 'package:blrber/models/product.dart';
-import 'package:blrber/models/user_detail.dart';
-import 'package:blrber/provider/get_current_location.dart';
-import 'package:blrber/screens/filtered_prod_screen.dart';
+//Imports for pubspec Packages
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:darq/darq.dart';
+//Imports for Constants
+import '../constants.dart';
+
+//Imports for Models
+import '../models/category.dart';
+import '../models/product.dart';
+import '../models/user_detail.dart';
+
+//Imports for Providers
+import '../provider/get_current_location.dart';
+
+//Imports for Screens
+import '../screens/filtered_prod_screen.dart';
 
 class MotorFilterScreen extends StatefulWidget {
+  final String catName;
+  final String subCatType;
+
+  MotorFilterScreen({
+    this.catName,
+    this.subCatType,
+  });
   @override
   _MotorFilterScreenState createState() => _MotorFilterScreenState();
 }
@@ -21,6 +36,20 @@ class CatNameCount {
   bool value;
 
   CatNameCount({
+    this.catName,
+    this.count,
+    this.value = false,
+  });
+}
+
+class SubCatNameCount {
+  String subCatName;
+  String catName;
+  int count;
+  bool value;
+
+  SubCatNameCount({
+    this.subCatName,
     this.catName,
     this.count,
     this.value = false,
@@ -103,6 +132,18 @@ class DriveTypeCount {
   });
 }
 
+class BodyTypeCount {
+  String bodyType;
+  int count;
+  bool value;
+
+  BodyTypeCount({
+    this.bodyType,
+    this.count,
+    this.value = false,
+  });
+}
+
 class NumberOfCylindersCount {
   String numberOfCylinders;
   int count;
@@ -146,6 +187,18 @@ class ForSaleByCount {
 
   ForSaleByCount({
     this.forSaleBy,
+    this.count,
+    this.value = false,
+  });
+}
+
+class TypeOfAdCount {
+  String typeOfAd;
+  int count;
+  bool value;
+
+  TypeOfAdCount({
+    this.typeOfAd,
     this.count,
     this.value = false,
   });
@@ -207,8 +260,10 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   TextEditingController _controllerMinYear = TextEditingController();
   TextEditingController _controllerMaxYear = TextEditingController();
 
-  List<DropdownMenuItem<String>> _catNames = [];
+  List<DropdownMenuItem<String>> _catNames, _subCatNames = [];
   List<CatNameCount> _catNameCounts = [];
+
+  List<SubCatNameCount> _subCatNameCounts = [];
 
   List<EngineCount> _engineCounts = [];
   List<EngineCount> _engineCountsTrue = [];
@@ -221,6 +276,10 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   List<DriveTypeCount> _driveTypeCounts = [];
   List<DriveTypeCount> _driveTypeCountsTrue = [];
   List<String> _driveTypeCountsTrueString = [];
+
+  List<BodyTypeCount> _bodyTypeCounts = [];
+  List<BodyTypeCount> _bodyTypeCountsTrue = [];
+  List<String> _bodyTypeCountsTrueString = [];
 
   List<NumberOfCylindersCount> _numberOfCylindersCounts = [];
   List<NumberOfCylindersCount> _numberOfCylindersCountsTrue = [];
@@ -237,6 +296,10 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   List<ForSaleByCount> _forSaleByCounts = [];
   List<ForSaleByCount> _forSaleByCountsTrue = [];
   List<String> _forSaleByCountsTrueString = [];
+
+  List<TypeOfAdCount> _typeOfAdCounts = [];
+  List<TypeOfAdCount> _typeOfAdCountsTrue = [];
+  List<String> _typeOfAdCountsTrueString = [];
 
   List<ListingStatusCount> _listingStatusCounts = [];
   List<ListingStatusCount> _listingStatusCountsTrue = [];
@@ -262,9 +325,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   List<ModelCount> _modelCountsTrue = [];
   List<String> _modelCountsTrueString = [];
 
-  List<SubCatTypeCount> _subCatTypeCounts = [];
-  List<SubCatTypeCount> _subCatTypeCountsTrue = [];
-  List<String> _subCatTypeCountsTrueString = [];
+  // List<SubCatTypeCount> _subCatTypeCounts = [];
+  // List<SubCatTypeCount> _subCatTypeCountsTrue = [];
+  // List<String> _subCatTypeCountsTrueString = [];
 
   List<Product> products, productsBySelectedCat, productsPro = [];
   List<Category> categories = [];
@@ -279,6 +342,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   List<String> filterFields = [];
   int selectedValue = 0;
   String _selectedCategory = '';
+  String _selectedSubCategory = '';
+  bool _vehicleCategory = false;
+  bool _specialVehicle = false;
   String _initialCategory = 'Unspecified';
   String minPrice = '';
   String maxPrice = '';
@@ -287,16 +353,31 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   String _countryCode = "";
   String userId = "";
   UserDetail userData = UserDetail();
+  bool _isInitialLoad = false;
 
   @override
   void initState() {
-    // _selectedCategory = widget.inCategory;
+    _selectedCategory = widget.catName;
+    _selectedSubCategory = widget.subCatType;
+    print('_selectedSubCategory - $_selectedSubCategory');
+    if (_selectedCategory == 'Vehicle') {
+      _vehicleCategory = true;
+    } else {
+      _vehicleCategory = false;
+    }
+    if (_selectedSubCategory == 'Cars' ||
+        _selectedSubCategory == 'Trucks' ||
+        _selectedSubCategory == 'Caravans') {
+      _specialVehicle = true;
+    } else {
+      _specialVehicle = false;
+    }
+    _isInitialLoad = true;
     super.initState();
   }
 
   @override
   void didChangeDependencies() {
-    super.didChangeDependencies();
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       userId = "";
@@ -311,7 +392,6 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
         if (userDetails.length > 0) {
           userData = userDetails[0];
           _countryCode = userData.buyingCountryCode;
-          print('userupdate - motor filter');
         }
       }
     }
@@ -333,7 +413,18 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
     categories = Provider.of<List<Category>>(context);
     subCategories = Provider.of<List<SubCategory>>(context);
     ctmSpecialInfos = Provider.of<List<CtmSpecialInfo>>(context);
+    if (products.length > 0 &&
+        categories.length > 0 &&
+        subCategories.length > 0 &&
+        ctmSpecialInfos.length > 0) {
+      _isInitialLoad = true;
+    } else {
+      _isInitialLoad = false;
+    }
+
     _buildCatNameCount();
+    _buildSubCatNameCount();
+    super.didChangeDependencies();
   }
 
   void _buildCatNameCount() {
@@ -359,12 +450,6 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
       _catNames = [];
       if (_catNameCounts != null) {
-        _catNames.add(
-          DropdownMenuItem(
-            value: _initialCategory,
-            child: Text(_initialCategory),
-          ),
-        );
         for (CatNameCount _catNameCount in _catNameCounts) {
           _catNames.add(
             DropdownMenuItem(
@@ -377,27 +462,34 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
     }
   }
 
-  void _buildCatWiseQueryData(String category) {
+  void _buildCatWiseQueryData(String category, String subCategory) {
     ctmSpecialInfosBySelectedCat = [];
     productsBySelectedCat = [];
+
     initializeFieldCount();
-    productsBySelectedCat =
-        products.where((p) => p.catName.trim() == category.trim()).toList();
+
+    productsBySelectedCat = products
+        .where((p) =>
+            (p.catName.trim() == category.trim()) &&
+            (p.subCatType.trim() == subCategory.trim()))
+        .toList();
 
     if (productsBySelectedCat.length > 0) {
       queriedProdId = [];
       for (var i = 0; i < productsBySelectedCat.length; i++) {
         queriedProdId.add(productsBySelectedCat[i].prodDocId);
 
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
-          var ctmSInfoTemp = ctmSpecialInfos
-              .where((e) =>
-                  e.prodDocId.trim() == productsBySelectedCat[i].prodDocId)
-              .toList();
+        if (ctmSpecialInfos.length > 0) {
+          if (_selectedCategory.trim() == 'Vehicle' &&
+              !_selectedSubCategory.contains('Accessories') &&
+              !_selectedSubCategory.contains('Others')) {
+            var ctmSInfoTemp = ctmSpecialInfos
+                .where((e) =>
+                    e.prodDocId.trim() == productsBySelectedCat[i].prodDocId)
+                .toList();
 
-          ctmSpecialInfosBySelectedCat.add(ctmSInfoTemp[0]);
+            ctmSpecialInfosBySelectedCat.add(ctmSInfoTemp[0]);
+          }
         }
       }
 
@@ -406,9 +498,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
         productsPro = productsBySelectedCat;
 
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
+        if (ctmSpecialInfosBySelectedCat.length > 0) {
           ctmSpecialInfosPro = ctmSpecialInfosBySelectedCat;
         } else {
           ctmSpecialInfosPro = [];
@@ -419,25 +509,79 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
     }
   }
 
+  void _buildSubCatNameCount() {
+    var subCatTypes = Provider.of<List<SubCategory>>(context, listen: false);
+
+    if (subCatTypes.length > 0) {
+      subCatTypes = subCatTypes
+          .where((e) =>
+              e.catName.toLowerCase().trim() ==
+              _selectedCategory.toLowerCase().trim())
+          .toList();
+
+      if (subCatTypes != null) {
+        _subCatNameCounts = [];
+
+        for (var i = 0; i < subCatTypes.length; i++) {
+          var cnt = products
+              .where((e) =>
+                  e.subCatType.trim().toLowerCase() ==
+                  subCatTypes[i].subCatType.trim().toLowerCase())
+              .toList()
+              .length;
+          if (cnt > 0) {
+            SubCatNameCount _subCatNameCount = SubCatNameCount();
+            _subCatNameCount.catName = subCatTypes[i].catName;
+            _subCatNameCount.subCatName = subCatTypes[i].subCatType;
+
+            _subCatNameCount.count = cnt;
+
+            _subCatNameCounts.add(_subCatNameCount);
+          }
+        }
+
+        _subCatNames = [];
+        if (_subCatNameCounts != null) {
+          _selectedSubCategory = _subCatNameCounts[0].subCatName;
+          for (SubCatNameCount _subCatNameCount in _subCatNameCounts) {
+            _subCatNames.add(
+              DropdownMenuItem(
+                value: _subCatNameCount.subCatName,
+                child: Text(
+                    '${_subCatNameCount.subCatName} (${_subCatNameCount.count})'),
+              ),
+            );
+          }
+        }
+      }
+    }
+  }
+
   void _prepareProdCount() {
     if (queriedProdIdPro.length > 0) {
-      _buildMakeCount();
-      _buildModelCount();
-      _buildSubCatTypeCount();
+      if (_selectedCategory.trim() == 'Vehicle' ||
+          _selectedCategory.trim() == 'Electronics' ||
+          _selectedCategory.trim() == 'Home Appliances') {
+        _buildMakeCount();
+        _buildModelCount();
+      }
+      // _buildSubCatTypeCount();
       _buildForSaleByCount();
       _buildListingStatusCount();
       _buildProdConditionCount();
+      _buildTypeOfAdCount();
 
-      if (_selectedCategory.trim() == 'Car'.trim() ||
-          _selectedCategory.trim() == 'Truck'.trim() ||
-          _selectedCategory.trim() == 'Motorbike'.trim()) {
-        _buildEngineCount();
+      if (_selectedCategory.trim() == 'Vehicle' &&
+          !_selectedSubCategory.contains('Accessories') &&
+          !_selectedSubCategory.contains('Others')) {
         _buildMileageCount();
         _buildExteriorColorCount();
 
-        if (_selectedCategory.trim() != 'Motorbike'.trim()) {
+        if (_specialVehicle) {
+          _buildEngineCount();
           _buildTransmissionCount();
           _buildDriveTypeCount();
+          _buildBodyTypeCount();
           _buildFuelTypeCount();
           _buildNumberOfCylindersCount();
           _buildInteriorColorCount();
@@ -451,9 +595,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
     productsPro = productsBySelectedCat;
 
-    if (_selectedCategory.trim() == 'Car'.trim() ||
-        _selectedCategory.trim() == 'Truck'.trim() ||
-        _selectedCategory.trim() == 'Motorbike'.trim()) {
+    if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+        !_selectedSubCategory.contains('Accessories') &&
+        !_selectedSubCategory.contains('Others')) {
       ctmSpecialInfosPro = ctmSpecialInfosBySelectedCat;
     } else {
       ctmSpecialInfosPro = [];
@@ -477,8 +621,8 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
     _modelCountsTrue = [];
     _modelCountsTrueString = [];
 
-    _subCatTypeCountsTrue = [];
-    _subCatTypeCountsTrueString = [];
+    // _subCatTypeCountsTrue = [];
+    // _subCatTypeCountsTrueString = [];
 
     _mileageCountsTrue = [];
     _mileageCountsTrueString = [];
@@ -491,6 +635,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
     _driveTypeCountsTrue = [];
     _driveTypeCountsTrueString = [];
+
+    _bodyTypeCountsTrue = [];
+    _bodyTypeCountsTrueString = [];
 
     _fuelTypeCountsTrue = [];
     _fuelTypeCountsTrueString = [];
@@ -506,6 +653,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
     _forSaleByCountsTrue = [];
     _forSaleByCountsTrueString = [];
+
+    _typeOfAdCountsTrue = [];
+    _typeOfAdCountsTrueString = [];
 
     _listingStatusCountsTrue = [];
     _listingStatusCountsTrueString = [];
@@ -523,9 +673,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
         case 'model':
           _buildModelQueryData();
           break;
-        case 'subCatType':
-          _buildSubCatTypeQueryData();
-          break;
+        // case 'subCatType':
+        //   _buildSubCatTypeQueryData();
+        //   break;
         case 'engine':
           _buildEngineQueryData();
           break;
@@ -541,6 +691,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
         case 'driveType':
           _buildDriveTypeQueryData();
           break;
+        case 'bodyType':
+          _buildBodyTypeQueryData();
+          break;
         case 'fuelType':
           _buildFuelTypeQueryData();
           break;
@@ -555,6 +708,10 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           break;
         case 'forSaleBy':
           _buildForSaleByQueryData();
+          break;
+
+        case 'typeOfAd':
+          _buildTypeOfAdQueryData();
           break;
         case 'listingStatus':
           _buildListingStatusQueryData();
@@ -594,16 +751,6 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
         }
       }
 
-      if (selectionField != 'subCatType') {
-        _buildSubCatTypeCount();
-      } else {
-        if (filterFields.any((e) => e == 'subCatType')) {
-        } else {
-          _subCatTypeCountsTrue = [];
-          _subCatTypeCountsTrueString = [];
-          _buildSubCatTypeCount();
-        }
-      }
       if (selectionField != 'engine') {
         _buildEngineCount();
       } else {
@@ -632,6 +779,16 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           _driveTypeCountsTrue = [];
           _driveTypeCountsTrueString = [];
           _buildDriveTypeCount();
+        }
+      }
+      if (selectionField != 'bodyType') {
+        _buildBodyTypeCount();
+      } else {
+        if (filterFields.any((e) => e == 'bodyType')) {
+        } else {
+          _bodyTypeCountsTrue = [];
+          _bodyTypeCountsTrueString = [];
+          _buildBodyTypeCount();
         }
       }
       if (selectionField != 'fuelType') {
@@ -682,6 +839,16 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           _forSaleByCountsTrue = [];
           _forSaleByCountsTrueString = [];
           _buildForSaleByCount();
+        }
+      }
+      if (selectionField != 'typeOfAd') {
+        _buildTypeOfAdCount();
+      } else {
+        if (filterFields.any((e) => e == 'typeOfAd')) {
+        } else {
+          _typeOfAdCountsTrue = [];
+          _typeOfAdCountsTrueString = [];
+          _buildTypeOfAdCount();
         }
       }
       if (selectionField != 'listingStatus') {
@@ -786,75 +953,38 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
     }
   }
 
-  void _buildSubCatTypeCount() {
-    if (productsPro.length > 0) {
-      _subCatTypeCounts = [];
-
-      var distinctProductsSC =
-          productsPro.distinct((d) => d.subCatDocId.trim()).toList();
-
-      for (var i = 0; i < distinctProductsSC.length; i++) {
-        var cnt = productsPro
-            .where((e) =>
-                e.subCatDocId.trim() ==
-                distinctProductsSC[i].subCatDocId.trim())
-            .toList()
-            .length;
-
-        if (subCategories != null) {
-          SubCategory subCategory = SubCategory();
-
-          subCategory = subCategories.firstWhere((e) =>
-              e.subCatDocId.trim() == distinctProductsSC[i].subCatDocId.trim());
-
-          if (subCategory.subCatDocId != null) {
-            SubCatTypeCount _subCatTypeCount = SubCatTypeCount();
-            _subCatTypeCount.subCatDocId = subCategory.subCatDocId;
-            _subCatTypeCount.subCatType = subCategory.subCatType;
-
-            if (_subCatTypeCountsTrue
-                .any((e) => e.subCatDocId == subCategory.subCatDocId)) {
-              _subCatTypeCount.value = true;
-            }
-            _subCatTypeCount.count = cnt;
-
-            _subCatTypeCounts.add(_subCatTypeCount);
-          }
-        }
-      }
-    }
-  }
-
   void _buildEngineCount() {
     if (ctmSpecialInfosPro.length > 0) {
-      var oldEngine = '';
+      if (_specialVehicle) {
+        var oldEngine = '';
 
-      _engineCounts = [];
+        _engineCounts = [];
 
-      ctmSpecialInfosPro.sort((a, b) {
-        var aEngine = a.engine;
-        var bEngine = b.engine;
-        return aEngine.compareTo(bEngine);
-      });
+        ctmSpecialInfosPro.sort((a, b) {
+          var aEngine = a.engine;
+          var bEngine = b.engine;
+          return aEngine.compareTo(bEngine);
+        });
 
-      for (var i = 0; i < ctmSpecialInfosPro.length; i++) {
-        if (oldEngine != ctmSpecialInfosPro[i].engine.trim()) {
-          oldEngine = ctmSpecialInfosPro[i].engine.trim();
+        for (var i = 0; i < ctmSpecialInfosPro.length; i++) {
+          if (oldEngine != ctmSpecialInfosPro[i].engine.trim()) {
+            oldEngine = ctmSpecialInfosPro[i].engine.trim();
 
-          var cnt = ctmSpecialInfosPro
-              .where((e) => e.engine.trim() == oldEngine.trim())
-              .toList()
-              .length;
+            var cnt = ctmSpecialInfosPro
+                .where((e) => e.engine.trim() == oldEngine.trim())
+                .toList()
+                .length;
 
-          EngineCount _engineCount = EngineCount();
-          _engineCount.engine = ctmSpecialInfosPro[i].engine.trim();
-          _engineCount.count = cnt;
-          if (_engineCountsTrue.any(
-              (e) => e.engine.trim() == ctmSpecialInfosPro[i].engine.trim())) {
-            _engineCount.value = true;
+            EngineCount _engineCount = EngineCount();
+            _engineCount.engine = ctmSpecialInfosPro[i].engine.trim();
+            _engineCount.count = cnt;
+            if (_engineCountsTrue.any((e) =>
+                e.engine.trim() == ctmSpecialInfosPro[i].engine.trim())) {
+              _engineCount.value = true;
+            }
+
+            _engineCounts.add(_engineCount);
           }
-
-          _engineCounts.add(_engineCount);
         }
       }
     }
@@ -862,7 +992,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
   void _buildTransmissionCount() {
     if (ctmSpecialInfosPro.length > 0) {
-      if (_selectedCategory.trim() != 'Motorbike'.trim()) {
+      if (_specialVehicle) {
         var oldTransmission = '';
 
         _transmissionCounts = [];
@@ -901,7 +1031,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
   void _buildDriveTypeCount() {
     if (ctmSpecialInfosPro.length > 0) {
-      if (_selectedCategory.trim() != 'Motorbike'.trim()) {
+      if (_specialVehicle) {
         var oldDriveType = '';
 
         _driveTypeCounts = [];
@@ -936,9 +1066,46 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
     }
   }
 
+  void _buildBodyTypeCount() {
+    if (ctmSpecialInfosPro.length > 0) {
+      if (_specialVehicle) {
+        var oldbodyType = '';
+
+        _bodyTypeCounts = [];
+
+        ctmSpecialInfosPro.sort((a, b) {
+          var abodyType = a.bodyType;
+          var bbodyType = b.bodyType;
+          return abodyType.compareTo(bbodyType);
+        });
+
+        for (var i = 0; i < ctmSpecialInfosPro.length; i++) {
+          if (oldbodyType != ctmSpecialInfosPro[i].bodyType.trim()) {
+            oldbodyType = ctmSpecialInfosPro[i].bodyType.trim();
+
+            var cnt = ctmSpecialInfosPro
+                .where((e) => e.bodyType.trim() == oldbodyType.trim())
+                .toList()
+                .length;
+
+            BodyTypeCount _bodyTypeCount = BodyTypeCount();
+            _bodyTypeCount.bodyType = ctmSpecialInfosPro[i].bodyType.trim();
+            _bodyTypeCount.count = cnt;
+            if (_bodyTypeCountsTrue.any((e) =>
+                e.bodyType.trim() == ctmSpecialInfosPro[i].bodyType.trim())) {
+              _bodyTypeCount.value = true;
+            }
+
+            _bodyTypeCounts.add(_bodyTypeCount);
+          }
+        }
+      }
+    }
+  }
+
   void _buildFuelTypeCount() {
     if (ctmSpecialInfosPro.length > 0) {
-      if (_selectedCategory.trim() != 'Motorbike'.trim()) {
+      if (_specialVehicle) {
         var oldfuelType = '';
 
         _fuelTypeCounts = [];
@@ -975,7 +1142,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
   void _buildNumberOfCylindersCount() {
     if (ctmSpecialInfosPro.length > 0) {
-      if (_selectedCategory.trim() != 'Motorbike'.trim()) {
+      if (_specialVehicle) {
         var oldnumberOfCylinders = '';
 
         _numberOfCylindersCounts = [];
@@ -1057,7 +1224,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
   void _buildInteriorColorCount() {
     if (ctmSpecialInfosPro.length > 0) {
-      if (_selectedCategory.trim() != 'Motorbike'.trim()) {
+      if (_specialVehicle) {
         var oldinteriorColor = '';
 
         _interiorColorCounts = [];
@@ -1126,6 +1293,42 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           }
 
           _forSaleByCounts.add(_forSaleByCount);
+        }
+      }
+    }
+  }
+
+  void _buildTypeOfAdCount() {
+    if (productsPro.length > 0) {
+      var oldtypeOfAd = '';
+
+      _typeOfAdCounts = [];
+
+      productsPro.sort((a, b) {
+        var atypeOfAd = a.typeOfAd;
+        var btypeOfAd = b.typeOfAd;
+
+        return atypeOfAd.compareTo(btypeOfAd);
+      });
+
+      for (var i = 0; i < productsPro.length; i++) {
+        if (oldtypeOfAd != productsPro[i].typeOfAd.trim()) {
+          oldtypeOfAd = productsPro[i].typeOfAd.trim();
+
+          var cnt = productsPro
+              .where((e) => e.typeOfAd.trim() == oldtypeOfAd.trim())
+              .toList()
+              .length;
+
+          TypeOfAdCount _typeOfAdCount = TypeOfAdCount();
+          _typeOfAdCount.typeOfAd = productsPro[i].typeOfAd.trim();
+          _typeOfAdCount.count = cnt;
+          if (_typeOfAdCountsTrue.any(
+              (e) => e.typeOfAd.trim() == productsPro[i].typeOfAd.trim())) {
+            _typeOfAdCount.value = true;
+          }
+
+          _typeOfAdCounts.add(_typeOfAdCount);
         }
       }
     }
@@ -1253,9 +1456,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
       for (var i = 0; i < _makeCountsTrue.length; i++) {
         _makeCountsTrueString.add(_makeCountsTrue[i].make);
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
+        if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+            !_selectedSubCategory.contains('Accessories') &&
+            !_selectedSubCategory.contains('Others')) {
           var ctmSpecialInfosTempMake = ctmSpecialInfosPro
               .where((p) => p.make == _makeCountsTrue[i].make)
               .toList();
@@ -1277,9 +1480,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
         productsPro = productsQueryMake;
 
         queriedProdIdPro = queriedProdIdMake;
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
+        if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+            !_selectedSubCategory.contains('Accessories') &&
+            !_selectedSubCategory.contains('Others')) {
           ctmSpecialInfosPro = ctmSpecialInfosQueryMake;
         } else {
           ctmSpecialInfosPro = [];
@@ -1299,9 +1502,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
       List<CtmSpecialInfo> ctmSpecialInfosQueryModel = [];
       for (var i = 0; i < _modelCountsTrue.length; i++) {
         _modelCountsTrueString.add(_modelCountsTrue[i].model);
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
+        if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+            !_selectedSubCategory.contains('Accessories') &&
+            !_selectedSubCategory.contains('Others')) {
           var ctmSpecialInfosTempModel = ctmSpecialInfosPro
               .where((p) => p.model == _modelCountsTrue[i].model)
               .toList();
@@ -1322,53 +1525,10 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
       setState(() {
         productsPro = productsQueryModel;
         queriedProdIdPro = queriedProdIdModel;
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
+        if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+            !_selectedSubCategory.contains('Accessories') &&
+            !_selectedSubCategory.contains('Others')) {
           ctmSpecialInfosPro = ctmSpecialInfosQueryModel;
-        } else {
-          ctmSpecialInfosPro = [];
-        }
-      });
-    }
-  }
-
-  void _buildSubCatTypeQueryData() {
-    _subCatTypeCountsTrue = [];
-    _subCatTypeCountsTrueString = [];
-
-    _subCatTypeCountsTrue =
-        _subCatTypeCounts.where((c) => c.value == true).toList();
-
-    if (_subCatTypeCountsTrue.length > 0) {
-      List<Product> productsQuerysubCatType = [];
-      List<CtmSpecialInfo> ctmSpecialInfosQuerysubCatType = [];
-      for (var i = 0; i < _subCatTypeCountsTrue.length; i++) {
-        _subCatTypeCountsTrueString.add(_subCatTypeCountsTrue[i].subCatType);
-
-        var productsTempsubCatType = productsPro
-            .where((p) => p.subCatDocId == _subCatTypeCountsTrue[i].subCatDocId)
-            .toList();
-        productsQuerysubCatType =
-            productsQuerysubCatType + productsTempsubCatType;
-      }
-
-      List<String> queriedProdIdsubCatType = [];
-      for (var i = 0; i < productsQuerysubCatType.length; i++) {
-        queriedProdIdsubCatType.add(productsQuerysubCatType[i].prodDocId);
-        var ctmSpecialInfosTempsubCatType = ctmSpecialInfosPro
-            .where((p) => p.prodDocId == productsQuerysubCatType[i].prodDocId)
-            .toList();
-        ctmSpecialInfosQuerysubCatType =
-            ctmSpecialInfosQuerysubCatType + ctmSpecialInfosTempsubCatType;
-      }
-      setState(() {
-        productsPro = productsQuerysubCatType;
-        queriedProdIdPro = queriedProdIdsubCatType;
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
-          ctmSpecialInfosPro = ctmSpecialInfosQuerysubCatType;
         } else {
           ctmSpecialInfosPro = [];
         }
@@ -1499,6 +1659,48 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           ctmSpecialInfosPro = ctmSpecialInfosQueryDriveType;
           productsPro = productsQueryDriveType;
           queriedProdIdPro = queriedProdIdDriveType;
+        });
+      }
+    }
+  }
+
+  void _buildBodyTypeQueryData() {
+    if (ctmSpecialInfosPro.length > 0) {
+      _bodyTypeCountsTrue = [];
+      _bodyTypeCountsTrueString = [];
+
+      _bodyTypeCountsTrue =
+          _bodyTypeCounts.where((c) => c.value == true).toList();
+
+      if (_bodyTypeCountsTrue.length > 0) {
+        List<Product> productsQueryBodyType = [];
+        List<CtmSpecialInfo> ctmSpecialInfosQueryBodyType = [];
+        for (var i = 0; i < _bodyTypeCountsTrue.length; i++) {
+          _bodyTypeCountsTrueString.add(_bodyTypeCountsTrue[i].bodyType);
+          var ctmSpecialInfosTempBodyType = ctmSpecialInfosPro
+              .where((p) =>
+                  p.bodyType.trim() == _bodyTypeCountsTrue[i].bodyType.trim())
+              .toList();
+          ctmSpecialInfosQueryBodyType =
+              ctmSpecialInfosQueryBodyType + ctmSpecialInfosTempBodyType;
+        }
+
+        for (var i = 0; i < ctmSpecialInfosQueryBodyType.length; i++) {
+          var productsTempBodyType = productsPro
+              .where((p) =>
+                  p.prodDocId == ctmSpecialInfosQueryBodyType[i].prodDocId)
+              .toList();
+          productsQueryBodyType.add(productsTempBodyType[0]);
+        }
+
+        List<String> queriedProdIdBodyType = [];
+        for (var i = 0; i < productsQueryBodyType.length; i++) {
+          queriedProdIdBodyType.add(productsQueryBodyType[i].prodDocId);
+        }
+        setState(() {
+          ctmSpecialInfosPro = ctmSpecialInfosQueryBodyType;
+          productsPro = productsQueryBodyType;
+          queriedProdIdPro = queriedProdIdBodyType;
         });
       }
     }
@@ -1704,9 +1906,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
         productsQueryForSaleBy = productsQueryForSaleBy + productsTempForSaleBy;
       }
 
-      if (_selectedCategory.trim() == 'Car'.trim() ||
-          _selectedCategory.trim() == 'Truck'.trim() ||
-          _selectedCategory.trim() == 'Motorbike'.trim()) {
+      if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+          !_selectedSubCategory.contains('Accessories') &&
+          !_selectedSubCategory.contains('Others')) {
         for (var i = 0; i < productsQueryForSaleBy.length; i++) {
           var ctmSpecialInfosTempForSaleBy = ctmSpecialInfosPro
               .where((p) => p.prodDocId == productsQueryForSaleBy[i].prodDocId)
@@ -1723,10 +1925,59 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
         productsPro = productsQueryForSaleBy;
         queriedProdIdPro = queriedProdIdForSaleBy;
 
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
+        if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+            !_selectedSubCategory.contains('Accessories') &&
+            !_selectedSubCategory.contains('Others')) {
           ctmSpecialInfosPro = ctmSpecialInfosQueryForSaleBy;
+        } else {
+          ctmSpecialInfosPro = [];
+        }
+      });
+    }
+  }
+
+  void _buildTypeOfAdQueryData() {
+    _typeOfAdCountsTrue = [];
+    _typeOfAdCountsTrueString = [];
+
+    _typeOfAdCountsTrue =
+        _typeOfAdCounts.where((c) => c.value == true).toList();
+
+    if (_typeOfAdCountsTrue.length > 0) {
+      List<Product> productsQueryTypeOfAd = [];
+      List<CtmSpecialInfo> ctmSpecialInfosQueryTypeOfAd = [];
+      for (var i = 0; i < _typeOfAdCountsTrue.length; i++) {
+        _typeOfAdCountsTrueString.add(_typeOfAdCountsTrue[i].typeOfAd);
+        var productsTempTypeOfAd = productsPro
+            .where((p) =>
+                p.typeOfAd.trim() == _typeOfAdCountsTrue[i].typeOfAd.trim())
+            .toList();
+        productsQueryTypeOfAd = productsQueryTypeOfAd + productsTempTypeOfAd;
+      }
+
+      if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+          !_selectedSubCategory.contains('Accessories') &&
+          !_selectedSubCategory.contains('Others')) {
+        for (var i = 0; i < productsQueryTypeOfAd.length; i++) {
+          var ctmSpecialInfosTempTypeOfAd = ctmSpecialInfosPro
+              .where((p) => p.prodDocId == productsQueryTypeOfAd[i].prodDocId)
+              .toList();
+          ctmSpecialInfosQueryTypeOfAd.add(ctmSpecialInfosTempTypeOfAd[0]);
+        }
+      }
+
+      List<String> queriedProdIdTypeOfAd = [];
+      for (var i = 0; i < productsQueryTypeOfAd.length; i++) {
+        queriedProdIdTypeOfAd.add(productsQueryTypeOfAd[i].prodDocId);
+      }
+      setState(() {
+        productsPro = productsQueryTypeOfAd;
+        queriedProdIdPro = queriedProdIdTypeOfAd;
+
+        if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+            !_selectedSubCategory.contains('Accessories') &&
+            !_selectedSubCategory.contains('Others')) {
+          ctmSpecialInfosPro = ctmSpecialInfosQueryTypeOfAd;
         } else {
           ctmSpecialInfosPro = [];
         }
@@ -1756,9 +2007,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             productsQueryListingStatus + productsTempListingStatus;
       }
 
-      if (_selectedCategory.trim() == 'Car'.trim() ||
-          _selectedCategory.trim() == 'Truck'.trim() ||
-          _selectedCategory.trim() == 'Motorbike'.trim()) {
+      if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+          !_selectedSubCategory.contains('Accessories') &&
+          !_selectedSubCategory.contains('Others')) {
         for (var i = 0; i < productsQueryListingStatus.length; i++) {
           var ctmSpecialInfosTempListingStatus = ctmSpecialInfosPro
               .where(
@@ -1776,9 +2027,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
       setState(() {
         productsPro = productsQueryListingStatus;
         queriedProdIdPro = queriedProdIdListingStatus;
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
+        if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+            !_selectedSubCategory.contains('Accessories') &&
+            !_selectedSubCategory.contains('Others')) {
           ctmSpecialInfosPro = ctmSpecialInfosQueryListingStatus;
         } else {
           ctmSpecialInfosPro = [];
@@ -1809,9 +2060,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             productsQueryProdCondition + productsTempProdCondition;
       }
 
-      if (_selectedCategory.trim() == 'Car'.trim() ||
-          _selectedCategory.trim() == 'Truck'.trim() ||
-          _selectedCategory.trim() == 'Motorbike'.trim()) {
+      if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+          !_selectedSubCategory.contains('Accessories') &&
+          !_selectedSubCategory.contains('Others')) {
         for (var i = 0; i < productsQueryProdCondition.length; i++) {
           var ctmSpecialInfosTempProdCondition = ctmSpecialInfosPro
               .where(
@@ -1829,9 +2080,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
       setState(() {
         productsPro = productsQueryProdCondition;
         queriedProdIdPro = queriedProdIdProdCondition;
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
+        if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+            !_selectedSubCategory.contains('Accessories') &&
+            !_selectedSubCategory.contains('Others')) {
           ctmSpecialInfosPro = ctmSpecialInfosQueryProdCondition;
         } else {
           ctmSpecialInfosPro = [];
@@ -1911,9 +2162,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
       for (var i = 0; i < productsQueryPrice.length; i++) {
         queriedProdIdPrice.add(productsQueryPrice[i].prodDocId);
 
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
+        if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+            !_selectedSubCategory.contains('Accessories') &&
+            !_selectedSubCategory.contains('Others')) {
           var ctmSpecialInfosTempPrice = ctmSpecialInfosPro
               .where((p) => p.prodDocId == productsQueryPrice[i].prodDocId)
               .toList();
@@ -1924,9 +2175,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
         productsPro = productsQueryPrice;
         queriedProdIdPro = queriedProdIdPrice;
 
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
+        if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+            !_selectedSubCategory.contains('Accessories') &&
+            !_selectedSubCategory.contains('Others')) {
           ctmSpecialInfosPro = ctmSpecialInfosQueryPrice;
         } else {
           ctmSpecialInfosPro = [];
@@ -1969,9 +2220,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
       for (var i = 0; i < productsQueryYear.length; i++) {
         queriedProdIdYear.add(productsQueryYear[i].prodDocId);
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
+        if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+            !_selectedSubCategory.contains('Accessories') &&
+            !_selectedSubCategory.contains('Others')) {
           var ctmSpecialInfosTempYear = ctmSpecialInfosPro
               .where((p) => p.prodDocId == productsQueryYear[i].prodDocId)
               .toList();
@@ -1981,9 +2232,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
       setState(() {
         productsPro = productsQueryYear;
         queriedProdIdPro = queriedProdIdYear;
-        if (_selectedCategory.trim() == 'Car'.trim() ||
-            _selectedCategory.trim() == 'Truck'.trim() ||
-            _selectedCategory.trim() == 'Motorbike'.trim()) {
+        if (_selectedCategory.trim() == 'Vehicle'.trim() &&
+            !_selectedSubCategory.contains('Accessories') &&
+            !_selectedSubCategory.contains('Others')) {
           ctmSpecialInfosPro = ctmSpecialInfosQueryYear;
         } else {
           ctmSpecialInfosPro = [];
@@ -2000,26 +2251,33 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isInitialLoad) {
+      print('inital one time load');
+      // if (products.length > 0) {
+      _buildCatWiseQueryData(_selectedCategory, _selectedSubCategory);
+      _isInitialLoad = false;
+      // }
+    }
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(
+          icon: const Icon(
             Icons.close,
-            color: Theme.of(context).disabledColor,
+            color: bDisabledColor,
           ),
           onPressed: () {
             Navigator.of(context).pop();
           },
         ),
         elevation: 0.0,
-        title: Text(
+        title: const Text(
           'Filters',
-          style: TextStyle(
-            color: Theme.of(context).disabledColor,
+          style: const TextStyle(
+            color: bDisabledColor,
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: bBackgroundColor,
       ),
       body: Stack(
         // return Container(
@@ -2034,34 +2292,43 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
               //   color: Colors.grey[300],
               child: Column(
                 children: [
-                  SizedBox(
+                  const SizedBox(
                     height: 20,
                   ),
                   Container(
                     height: 30,
-                    padding: EdgeInsets.only(left: 10),
-                    color: Colors.white,
+                    padding: const EdgeInsets.only(left: 10),
+                    color: bBackgroundColor,
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(
+                      child: const Text(
                         'Select Category',
                       ),
                     ),
                   ),
                   Container(
-                    color: Colors.white,
+                    color: bBackgroundColor,
                     child: DropdownButtonFormField<String>(
                       items: _catNames,
                       elevation: 0,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(),
+                      decoration: const InputDecoration(
+                        border: const OutlineInputBorder(),
                       ),
                       onChanged: (value) async {
                         if (value != _selectedCategory) {
                           setState(() {
                             _selectedCategory = value;
+                            if (_selectedCategory == 'Vehicle') {
+                              _vehicleCategory = true;
+                            } else {
+                              _vehicleCategory = false;
+                            }
                           });
-                          _buildCatWiseQueryData(_selectedCategory);
+                          print(
+                              'select category - $_selectedCategory, $_selectedSubCategory');
+                          _buildSubCatNameCount();
+                          _buildCatWiseQueryData(
+                              _selectedCategory, _selectedSubCategory);
                         }
                       },
                       value: _selectedCategory == ''
@@ -2069,19 +2336,63 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                           : _selectedCategory,
                     ),
                   ),
-                  SizedBox(
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  //sub category
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  Container(
+                    height: 30,
+                    padding: const EdgeInsets.only(left: 10),
+                    color: bBackgroundColor,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: const Text(
+                        'Select Sub Category',
+                      ),
+                    ),
+                  ),
+                  Container(
+                    color: bBackgroundColor,
+                    child: DropdownButtonFormField<String>(
+                      items: _subCatNames,
+                      elevation: 0,
+                      decoration: const InputDecoration(
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: (value) async {
+                        if (value != _selectedSubCategory) {
+                          setState(() {
+                            _selectedSubCategory = value;
+                            if (_selectedSubCategory == 'Cars' ||
+                                _selectedSubCategory == 'Trucks' ||
+                                _selectedSubCategory == 'Caravans') {
+                              _specialVehicle = true;
+                            } else {
+                              _specialVehicle = false;
+                            }
+                          });
+                          // _buildSubCatNameCount();
+                          _buildCatWiseQueryData(
+                              _selectedCategory, _selectedSubCategory);
+                        }
+                      },
+                      value: _selectedSubCategory == ''
+                          ? _initialCategory
+                          : _selectedSubCategory,
+                    ),
+                  ),
+                  const SizedBox(
                     height: 10,
                   ),
                   if (queriedProdIdPro.length > 0)
-                    if (_selectedCategory.trim() == 'Car'.trim() ||
-                        _selectedCategory.trim() == 'Truck'.trim() ||
-                        _selectedCategory.trim() == 'Motorbike'.trim())
-                      carMotor(),
-                  if (queriedProdIdPro.length > 0)
-                    if (_selectedCategory.trim() != 'Car'.trim() &&
-                        _selectedCategory.trim() != 'Truck'.trim() &&
-                        _selectedCategory.trim() != 'Motorbike'.trim())
-                      commonFilterUI(),
+                    (_selectedCategory.trim() == 'Vehicle'.trim() &&
+                            !_selectedSubCategory.contains('Accessories') &&
+                            !_selectedSubCategory.contains('Others'))
+                        ? carMotor()
+                        : commonFilterUI(),
                 ],
               ),
               // ),
@@ -2092,7 +2403,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              color: Colors.white,
+              color: bBackgroundColor,
               width: double.infinity,
               height: 50,
               child: Padding(
@@ -2101,20 +2412,21 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                   style: ElevatedButton.styleFrom(
                       primary: queriedProdIdPro.length == 0
                           ? Colors.orange[200]
-                          : Theme.of(context).primaryColor),
+                          : bPrimaryColor),
                   onPressed: () {
-                    queriedProdIdPro.length > 0
-                        ? Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) {
-                                  return FilteredProdScreen(
-                                    queriedProdIdList: queriedProdIdPro,
-                                  );
-                                },
-                                fullscreenDialog: true),
-                          )
-                        : null;
+                    if (queriedProdIdPro.length > 0) {
+                      print("queriedProdIdPro - ${queriedProdIdPro.length}");
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) {
+                              return FilteredProdScreen(
+                                queriedProdIdList: queriedProdIdPro,
+                              );
+                            },
+                            fullscreenDialog: true),
+                      );
+                    }
                   },
                   child: queriedProdIdPro.length > 0
                       ? Text(queriedProdIdPro.length > 1
@@ -2136,7 +2448,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
     return Column(
       children: [
         Container(
-          padding: EdgeInsets.only(left: 10),
+          padding: const EdgeInsets.only(left: 10),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -2144,11 +2456,11 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
         Container(
-          color: Colors.white,
+          color: bBackgroundColor,
           width: double.infinity,
           height: _makeCountsTrue.length <= 10
               ? MediaQuery.of(context).size.height / 12
@@ -2156,15 +2468,15 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           child: Container(
             width: double.infinity,
             child: ListTile(
-              title: Text(
+              title: const Text(
                 'Make',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+                style: const TextStyle(
+                  color: bDisabledColor,
                 ),
               ),
               subtitle: _makeCountsTrue.length > 0
                   ? Text(_makeCountsTrueString.join(', '))
-                  : Text(''),
+                  : const Text(''),
               onTap: () {
                 showDialog(
                   context: context,
@@ -2181,11 +2493,11 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 2,
         ),
         Container(
-          color: Colors.white,
+          color: bBackgroundColor,
           width: double.infinity,
           height: _modelCountsTrue.length <= 10
               ? MediaQuery.of(context).size.height / 12
@@ -2193,15 +2505,15 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           child: Container(
             width: double.infinity,
             child: ListTile(
-              title: Text(
+              title: const Text(
                 'Model',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+                style: const TextStyle(
+                  color: bDisabledColor,
                 ),
               ),
               subtitle: _modelCountsTrue.length > 0
                   ? Text(_modelCountsTrueString.join(', '))
-                  : Text(''),
+                  : const Text(''),
               onTap: () {
                 showDialog(
                   context: context,
@@ -2218,57 +2530,21 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 2,
         ),
+
         Container(
-          color: Colors.white,
-          width: double.infinity,
-          height: _subCatTypeCountsTrue.length <= 10
-              ? MediaQuery.of(context).size.height / 12
-              : MediaQuery.of(context).size.height / 8,
-          child: Container(
-            width: double.infinity,
-            child: ListTile(
-              title: Text(
-                'Type',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
-                ),
-              ),
-              subtitle: _subCatTypeCountsTrue.length > 0
-                  ? Text(_subCatTypeCountsTrueString.join(', '))
-                  : Text(''),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return StatefulBuilder(
-                      builder: (BuildContext context, StateSetter setState) {
-                        return _subCatTypeDialogWidget(
-                            context, setState, _subCatTypeCounts);
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-        SizedBox(
-          height: 15,
-        ),
-        Container(
-          color: Colors.white,
+          color: bBackgroundColor,
           width: double.infinity,
           height: 60,
           child: Container(
             width: double.infinity,
             child: ListTile(
-              title: Text(
+              title: const Text(
                 'Price',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+                style: const TextStyle(
+                  color: bDisabledColor,
                 ),
               ),
               subtitle: minPrice.isNotEmpty
@@ -2277,7 +2553,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                       : maxPrice == '99999999'
                           ? Text('>= $minPrice')
                           : Text('$minPrice - $maxPrice')
-                  : Text(''),
+                  : const Text(''),
               onTap: () {
                 showDialog(
                   context: context,
@@ -2293,27 +2569,27 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 2,
         ),
         Container(
-          color: Colors.white,
+          color: bBackgroundColor,
           width: double.infinity,
           height: 60,
           child: Container(
             width: double.infinity,
             child: ListTile(
-              title: Text(
+              title: const Text(
                 'Year',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+                style: const TextStyle(
+                  color: bDisabledColor,
                 ),
               ),
               subtitle: minYear.isNotEmpty
                   ? minYear == '1790'
                       ? Text('<= $maxYear')
                       : Text('$minYear - $maxYear')
-                  : Text(''),
+                  : const Text(''),
               onTap: () {
                 showDialog(
                   context: context,
@@ -2329,11 +2605,11 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 2,
         ),
         Container(
-          color: Colors.white,
+          color: bBackgroundColor,
           width: double.infinity,
           height: _mileageCountsTrue.length <= 10
               ? MediaQuery.of(context).size.height / 12
@@ -2341,15 +2617,15 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           child: Container(
             width: double.infinity,
             child: ListTile(
-              title: Text(
+              title: const Text(
                 'Mileage',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+                style: const TextStyle(
+                  color: bDisabledColor,
                 ),
               ),
               subtitle: _mileageCountsTrue.length > 0
                   ? Text(_mileageCountsTrueString.join(', '))
-                  : Text(''),
+                  : const Text(''),
               onTap: () {
                 showDialog(
                   context: context,
@@ -2366,66 +2642,74 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ),
           ),
         ),
-        SizedBox(
-          height: 10,
-        ),
-        Container(
-          // color: Colors.white,
-          padding: EdgeInsets.only(left: 10),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Engine/Transmission',
-            ),
-          ),
-        ),
-        SizedBox(
-          height: 10,
-        ),
-        Container(
-          color: Colors.white,
-          width: double.infinity,
-          height: _engineCountsTrue.length <= 10
-              ? MediaQuery.of(context).size.height / 12
-              : MediaQuery.of(context).size.height / 8,
-          child: Container(
-            width: double.infinity,
-            child: ListTile(
-              title: Text(
-                'Engine',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+        if (_specialVehicle)
+
+          // Following items in the column are only available for Car/Truck Category
+          Column(
+            children: [
+              const SizedBox(
+                height: 10,
+              ),
+              Container(
+                // color: bBackgroundColor,
+                padding: const EdgeInsets.only(left: 10),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Engine/Transmission',
+                  ),
                 ),
               ),
-              subtitle: _engineCountsTrue.length > 0
-                  ? Text(_engineCountsTrueString.join(', '))
-                  : Text(''),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return StatefulBuilder(
-                      builder: (BuildContext context, StateSetter setState) {
-                        return _engineDialogWidget(
-                            context, setState, _engineCounts);
-                      },
-                    );
-                  },
-                );
-              },
-            ),
+              const SizedBox(
+                height: 10,
+              ),
+              Container(
+                color: bBackgroundColor,
+                width: double.infinity,
+                height: _engineCountsTrue.length <= 10
+                    ? MediaQuery.of(context).size.height / 12
+                    : MediaQuery.of(context).size.height / 8,
+                child: Container(
+                  width: double.infinity,
+                  child: ListTile(
+                    title: Text(
+                      'Engine',
+                      style: const TextStyle(
+                        color: bDisabledColor,
+                      ),
+                    ),
+                    subtitle: _engineCountsTrue.length > 0
+                        ? Text(_engineCountsTrueString.join(', '))
+                        : const Text(''),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return StatefulBuilder(
+                            builder:
+                                (BuildContext context, StateSetter setState) {
+                              return _engineDialogWidget(
+                                  context, setState, _engineCounts);
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        SizedBox(
+        const SizedBox(
           height: 2,
         ),
-        if (_selectedCategory.trim() != 'Motorbike'.trim())
+        if (_specialVehicle)
 
           // Following items in the column are only available for Car/Truck Category
           Column(
             children: [
               Container(
-                color: Colors.white,
+                color: bBackgroundColor,
                 width: double.infinity,
                 height: _transmissionCountsTrue.length <= 10
                     ? MediaQuery.of(context).size.height / 12
@@ -2433,15 +2717,15 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                 child: Container(
                   width: double.infinity,
                   child: ListTile(
-                    title: Text(
+                    title: const Text(
                       'Transmission',
-                      style: TextStyle(
-                        color: Theme.of(context).disabledColor,
+                      style: const TextStyle(
+                        color: bDisabledColor,
                       ),
                     ),
                     subtitle: _transmissionCountsTrue.length > 0
                         ? Text(_transmissionCountsTrueString.join(', '))
-                        : Text(''),
+                        : const Text(''),
                     onTap: () {
                       showDialog(
                         context: context,
@@ -2459,11 +2743,49 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 2,
               ),
               Container(
-                color: Colors.white,
+                color: bBackgroundColor,
+                width: double.infinity,
+                height: _bodyTypeCountsTrue.length <= 10
+                    ? MediaQuery.of(context).size.height / 12
+                    : MediaQuery.of(context).size.height / 8,
+                child: Container(
+                  width: double.infinity,
+                  child: ListTile(
+                    title: const Text(
+                      'Body Type',
+                      style: const TextStyle(
+                        color: bDisabledColor,
+                      ),
+                    ),
+                    subtitle: _bodyTypeCountsTrue.length > 0
+                        ? Text(_bodyTypeCountsTrueString.join(', '))
+                        : const Text(''),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return StatefulBuilder(
+                            builder:
+                                (BuildContext context, StateSetter setState) {
+                              return _bodyTypeDialogWidget(
+                                  context, setState, _bodyTypeCounts);
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(
+                height: 2,
+              ),
+              Container(
+                color: bBackgroundColor,
                 width: double.infinity,
                 height: _driveTypeCountsTrue.length <= 10
                     ? MediaQuery.of(context).size.height / 12
@@ -2471,15 +2793,15 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                 child: Container(
                   width: double.infinity,
                   child: ListTile(
-                    title: Text(
+                    title: const Text(
                       'Drive Type',
-                      style: TextStyle(
-                        color: Theme.of(context).disabledColor,
+                      style: const TextStyle(
+                        color: bDisabledColor,
                       ),
                     ),
                     subtitle: _driveTypeCountsTrue.length > 0
                         ? Text(_driveTypeCountsTrueString.join(', '))
-                        : Text(''),
+                        : const Text(''),
                     onTap: () {
                       showDialog(
                         context: context,
@@ -2497,11 +2819,11 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 2,
               ),
               Container(
-                color: Colors.white,
+                color: bBackgroundColor,
                 width: double.infinity,
                 height: _fuelTypeCountsTrue.length <= 10
                     ? MediaQuery.of(context).size.height / 12
@@ -2509,15 +2831,15 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                 child: Container(
                   width: double.infinity,
                   child: ListTile(
-                    title: Text(
+                    title: const Text(
                       'Fuel Type',
-                      style: TextStyle(
-                        color: Theme.of(context).disabledColor,
+                      style: const TextStyle(
+                        color: bDisabledColor,
                       ),
                     ),
                     subtitle: _fuelTypeCountsTrue.length > 0
                         ? Text(_fuelTypeCountsTrueString.join(', '))
-                        : Text(''),
+                        : const Text(''),
                     onTap: () {
                       showDialog(
                         context: context,
@@ -2535,11 +2857,11 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 2,
               ),
               Container(
-                color: Colors.white,
+                color: bBackgroundColor,
                 width: double.infinity,
                 height: _numberOfCylindersCountsTrue.length <= 10
                     ? MediaQuery.of(context).size.height / 12
@@ -2547,15 +2869,15 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                 child: Container(
                   width: double.infinity,
                   child: ListTile(
-                    title: Text(
+                    title: const Text(
                       'Number of Cylinders',
-                      style: TextStyle(
-                        color: Theme.of(context).disabledColor,
+                      style: const TextStyle(
+                        color: bDisabledColor,
                       ),
                     ),
                     subtitle: _numberOfCylindersCountsTrue.length > 0
                         ? Text(_numberOfCylindersCountsTrueString.join(', '))
-                        : Text(''),
+                        : const Text(''),
                     onTap: () {
                       showDialog(
                         context: context,
@@ -2576,12 +2898,12 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ],
           ),
 
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
         Container(
-          // color: Colors.white,
-          padding: EdgeInsets.only(left: 10),
+          // color: bBackgroundColor,
+          padding: const EdgeInsets.only(left: 10),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -2589,11 +2911,11 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
         Container(
-          color: Colors.white,
+          color: bBackgroundColor,
           width: double.infinity,
           height: _forSaleByCountsTrue.length <= 10
               ? MediaQuery.of(context).size.height / 12
@@ -2603,13 +2925,13 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             child: ListTile(
               title: Text(
                 'Seller Type',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+                style: const TextStyle(
+                  color: bDisabledColor,
                 ),
               ),
               subtitle: _forSaleByCountsTrue.length > 0
                   ? Text(_forSaleByCountsTrueString.join(', '))
-                  : Text(''),
+                  : const Text(''),
               onTap: () {
                 showDialog(
                   context: context,
@@ -2626,11 +2948,11 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 2,
         ),
         Container(
-          color: Colors.white,
+          color: bBackgroundColor,
           width: double.infinity,
           height: _listingStatusCountsTrue.length <= 10
               ? MediaQuery.of(context).size.height / 12
@@ -2638,15 +2960,15 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           child: Container(
             width: double.infinity,
             child: ListTile(
-              title: Text(
+              title: const Text(
                 'Listing Status',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+                style: const TextStyle(
+                  color: bDisabledColor,
                 ),
               ),
               subtitle: _listingStatusCountsTrue.length > 0
                   ? Text(_listingStatusCountsTrueString.join(', '))
-                  : Text(''),
+                  : const Text(''),
               onTap: () {
                 showDialog(
                   context: context,
@@ -2663,24 +2985,25 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
+
         Container(
-          // color: Colors.white,
-          padding: EdgeInsets.only(left: 10),
+          // color: bBackgroundColor,
+          padding: const EdgeInsets.only(left: 10),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Product Condition',
+              'Type of Ad',
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
         Container(
-          color: Colors.white,
+          color: bBackgroundColor,
           width: double.infinity,
           height: _prodConditionCountsTrue.length <= 10
               ? MediaQuery.of(context).size.height / 12
@@ -2689,14 +3012,64 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             width: double.infinity,
             child: ListTile(
               title: Text(
+                'Type of Ad',
+                style: const TextStyle(
+                  color: bDisabledColor,
+                ),
+              ),
+              subtitle: _typeOfAdCountsTrue.length > 0
+                  ? Text(_typeOfAdCountsTrueString.join(', '))
+                  : const Text(''),
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return StatefulBuilder(
+                      builder: (BuildContext context, StateSetter setState) {
+                        return _typeOfAdDialogWidget(
+                            context, setState, _typeOfAdCounts);
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        Container(
+          // color: bBackgroundColor,
+          padding: const EdgeInsets.only(left: 10),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Product Condition',
+            ),
+          ),
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        Container(
+          color: bBackgroundColor,
+          width: double.infinity,
+          height: _prodConditionCountsTrue.length <= 10
+              ? MediaQuery.of(context).size.height / 12
+              : MediaQuery.of(context).size.height / 8,
+          child: Container(
+            width: double.infinity,
+            child: ListTile(
+              title: const Text(
                 'Condition',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+                style: const TextStyle(
+                  color: bDisabledColor,
                 ),
               ),
               subtitle: _prodConditionCountsTrue.length > 0
                   ? Text(_prodConditionCountsTrueString.join(', '))
-                  : Text(''),
+                  : const Text(''),
               onTap: () {
                 showDialog(
                   context: context,
@@ -2713,24 +3086,24 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
         Container(
-          // color: Colors.white,
-          padding: EdgeInsets.only(left: 10),
+          // color: bBackgroundColor,
+          padding: const EdgeInsets.only(left: 10),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text(
+            child: const Text(
               'Color',
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
         Container(
-          color: Colors.white,
+          color: bBackgroundColor,
           width: double.infinity,
           height: _exteriorColorCountsTrue.length <= 10
               ? MediaQuery.of(context).size.height / 12
@@ -2738,15 +3111,15 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           child: Container(
             width: double.infinity,
             child: ListTile(
-              title: Text(
+              title: const Text(
                 'Exterior Color',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+                style: const TextStyle(
+                  color: bDisabledColor,
                 ),
               ),
               subtitle: _exteriorColorCountsTrue.length > 0
                   ? Text(_exteriorColorCountsTrueString.join(', '))
-                  : Text(''),
+                  : const Text(''),
               onTap: () {
                 showDialog(
                   context: context,
@@ -2763,13 +3136,13 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ),
           ),
         ),
-        if (_selectedCategory.trim() != 'Motorbike'.trim())
-          SizedBox(
+        if (_specialVehicle)
+          const SizedBox(
             height: 2,
           ),
-        if (_selectedCategory.trim() != 'Motorbike'.trim())
+        if (_specialVehicle)
           Container(
-            color: Colors.white,
+            color: bBackgroundColor,
             width: double.infinity,
             height: _interiorColorCountsTrue.length <= 10
                 ? MediaQuery.of(context).size.height / 12
@@ -2777,15 +3150,15 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             child: Container(
               width: double.infinity,
               child: ListTile(
-                title: Text(
+                title: const Text(
                   'Interior Color',
-                  style: TextStyle(
-                    color: Theme.of(context).disabledColor,
+                  style: const TextStyle(
+                    color: bDisabledColor,
                   ),
                 ),
                 subtitle: _interiorColorCountsTrue.length > 0
                     ? Text(_interiorColorCountsTrueString.join(', '))
-                    : Text(''),
+                    : const Text(''),
                 onTap: () {
                   showDialog(
                     context: context,
@@ -2802,7 +3175,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
               ),
             ),
           ),
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
         //Following container to display the last before item in the column
@@ -2820,7 +3193,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
     return Column(
       children: [
         Container(
-          padding: EdgeInsets.only(left: 10),
+          padding: const EdgeInsets.only(left: 10),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -2828,131 +3201,104 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
-        Container(
-          color: Colors.white,
-          width: double.infinity,
-          height: _makeCountsTrue.length <= 10
-              ? MediaQuery.of(context).size.height / 12
-              : MediaQuery.of(context).size.height / 8,
-          child: Container(
-            width: double.infinity,
-            child: ListTile(
-              title: Text(
-                'Make',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+        if (_selectedCategory.trim() == 'Vehicle'.trim() ||
+            _selectedCategory.trim() == 'Electronics'.trim() ||
+            _selectedCategory.trim() == 'Home Appliances'.trim())
+          Column(
+            children: [
+              Container(
+                color: bBackgroundColor,
+                width: double.infinity,
+                height: _makeCountsTrue.length <= 10
+                    ? MediaQuery.of(context).size.height / 12
+                    : MediaQuery.of(context).size.height / 8,
+                child: Container(
+                  width: double.infinity,
+                  child: ListTile(
+                    title: const Text(
+                      'Make',
+                      style: const TextStyle(
+                        color: bDisabledColor,
+                      ),
+                    ),
+                    subtitle: _makeCountsTrue.length > 0
+                        ? Text(_makeCountsTrueString.join(', '))
+                        : const Text(''),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return StatefulBuilder(
+                            builder:
+                                (BuildContext context, StateSetter setState) {
+                              return _makeDialogWidget(
+                                  context, setState, _makeCounts);
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
-              subtitle: _makeCountsTrue.length > 0
-                  ? Text(_makeCountsTrueString.join(', '))
-                  : Text(''),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return StatefulBuilder(
-                      builder: (BuildContext context, StateSetter setState) {
-                        return _makeDialogWidget(
-                            context, setState, _makeCounts);
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-        SizedBox(
-          height: 2,
-        ),
-        Container(
-          color: Colors.white,
-          width: double.infinity,
-          height: _modelCountsTrue.length <= 10
-              ? MediaQuery.of(context).size.height / 12
-              : MediaQuery.of(context).size.height / 8,
-          child: Container(
-            width: double.infinity,
-            child: ListTile(
-              title: Text(
-                'Model',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+              const SizedBox(
+                height: 2,
+              ),
+              Container(
+                color: bBackgroundColor,
+                width: double.infinity,
+                height: _modelCountsTrue.length <= 10
+                    ? MediaQuery.of(context).size.height / 12
+                    : MediaQuery.of(context).size.height / 8,
+                child: Container(
+                  width: double.infinity,
+                  child: ListTile(
+                    title: const Text(
+                      'Model',
+                      style: const TextStyle(
+                        color: bDisabledColor,
+                      ),
+                    ),
+                    subtitle: _modelCountsTrue.length > 0
+                        ? Text(_modelCountsTrueString.join(', '))
+                        : const Text(''),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return StatefulBuilder(
+                            builder:
+                                (BuildContext context, StateSetter setState) {
+                              return _modelDialogWidget(
+                                  context, setState, _modelCounts);
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
-              subtitle: _modelCountsTrue.length > 0
-                  ? Text(_modelCountsTrueString.join(', '))
-                  : Text(''),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return StatefulBuilder(
-                      builder: (BuildContext context, StateSetter setState) {
-                        return _modelDialogWidget(
-                            context, setState, _modelCounts);
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-        SizedBox(
-          height: 2,
-        ),
-        Container(
-          color: Colors.white,
-          width: double.infinity,
-          height: _subCatTypeCountsTrue.length <= 10
-              ? MediaQuery.of(context).size.height / 12
-              : MediaQuery.of(context).size.height / 8,
-          child: Container(
-            width: double.infinity,
-            child: ListTile(
-              title: Text(
-                'Type',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
-                ),
+              const SizedBox(
+                height: 2,
               ),
-              subtitle: _subCatTypeCountsTrue.length > 0
-                  ? Text(_subCatTypeCountsTrueString.join(', '))
-                  : Text(''),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return StatefulBuilder(
-                      builder: (BuildContext context, StateSetter setState) {
-                        return _subCatTypeDialogWidget(
-                            context, setState, _subCatTypeCounts);
-                      },
-                    );
-                  },
-                );
-              },
-            ),
+            ],
           ),
-        ),
-        SizedBox(
-          height: 15,
-        ),
+
         Container(
-          color: Colors.white,
+          color: bBackgroundColor,
           width: double.infinity,
           height: 60,
           child: Container(
             width: double.infinity,
             child: ListTile(
-              title: Text(
+              title: const Text(
                 'Price',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+                style: const TextStyle(
+                  color: bDisabledColor,
                 ),
               ),
               subtitle: minPrice.isNotEmpty
@@ -2961,7 +3307,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                       : maxPrice == '99999999'
                           ? Text('>= $minPrice')
                           : Text('$minPrice - $maxPrice')
-                  : Text(''),
+                  : const Text(''),
               onTap: () {
                 showDialog(
                   context: context,
@@ -2977,27 +3323,27 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 2,
         ),
         Container(
-          color: Colors.white,
+          color: bBackgroundColor,
           width: double.infinity,
           height: 60,
           child: Container(
             width: double.infinity,
             child: ListTile(
-              title: Text(
+              title: const Text(
                 'Year',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+                style: const TextStyle(
+                  color: bDisabledColor,
                 ),
               ),
               subtitle: minYear.isNotEmpty
                   ? minYear == '1790'
                       ? Text('<= $maxYear')
                       : Text('$minYear - $maxYear')
-                  : Text(''),
+                  : const Text(''),
               onTap: () {
                 showDialog(
                   context: context,
@@ -3014,24 +3360,25 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           ),
         ),
 
-        SizedBox(
+        // Type of ad
+        const SizedBox(
           height: 10,
         ),
         Container(
-          // color: Colors.white,
-          padding: EdgeInsets.only(left: 10),
+          // color: bBackgroundColor,
+          padding: const EdgeInsets.only(left: 10),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text(
-              'Product Condition',
+            child: const Text(
+              'Type of Ad',
             ),
           ),
         ),
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
         Container(
-          color: Colors.white,
+          color: bBackgroundColor,
           width: double.infinity,
           height: _prodConditionCountsTrue.length <= 10
               ? MediaQuery.of(context).size.height / 12
@@ -3039,15 +3386,66 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           child: Container(
             width: double.infinity,
             child: ListTile(
-              title: Text(
+              title: const Text(
+                'Type of Ad',
+                style: const TextStyle(
+                  color: bDisabledColor,
+                ),
+              ),
+              subtitle: _typeOfAdCountsTrue.length > 0
+                  ? Text(_typeOfAdCountsTrueString.join(', '))
+                  : const Text(''),
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return StatefulBuilder(
+                      builder: (BuildContext context, StateSetter setState) {
+                        return _typeOfAdDialogWidget(
+                            context, setState, _typeOfAdCounts);
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+
+        const SizedBox(
+          height: 10,
+        ),
+        Container(
+          // color: bBackgroundColor,
+          padding: const EdgeInsets.only(left: 10),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: const Text(
+              'Product Condition',
+            ),
+          ),
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        Container(
+          color: bBackgroundColor,
+          width: double.infinity,
+          height: _prodConditionCountsTrue.length <= 10
+              ? MediaQuery.of(context).size.height / 12
+              : MediaQuery.of(context).size.height / 8,
+          child: Container(
+            width: double.infinity,
+            child: ListTile(
+              title: const Text(
                 'Condition',
-                style: TextStyle(
-                  color: Theme.of(context).disabledColor,
+                style: const TextStyle(
+                  color: bDisabledColor,
                 ),
               ),
               subtitle: _prodConditionCountsTrue.length > 0
                   ? Text(_prodConditionCountsTrueString.join(', '))
-                  : Text(''),
+                  : const Text(''),
               onTap: () {
                 showDialog(
                   context: context,
@@ -3065,7 +3463,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           ),
         ),
 
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
         //Following container to display the last before item in the column
@@ -3082,7 +3480,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   Widget _makeDialogWidget(
       BuildContext context, StateSetter setState, List<MakeCount> _makeCounts) {
     return AlertDialog(
-      title: Text('Make'),
+      title: const Text('Make'),
       content: Container(
         height: _makeCounts.length <= 6
             ? MediaQuery.of(context).size.height / 3
@@ -3093,7 +3491,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           itemCount: _makeCounts.length,
           itemBuilder: (BuildContext context, int index) {
             return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
+              activeColor: bPrimaryColor,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
                   '${_makeCounts[index].make} (${_makeCounts[index].count})'),
@@ -3129,7 +3527,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   Widget _modelDialogWidget(BuildContext context, StateSetter setState,
       List<ModelCount> _modelCounts) {
     return AlertDialog(
-      title: Text('Model'),
+      title: const Text('Model'),
       content: Container(
         height: _modelCounts.length <= 6
             ? MediaQuery.of(context).size.height / 3
@@ -3140,7 +3538,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           itemCount: _modelCounts.length,
           itemBuilder: (BuildContext context, int index) {
             return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
+              activeColor: bPrimaryColor,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
                   '${_modelCounts[index].model} (${_modelCounts[index].count})'),
@@ -3170,58 +3568,12 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
     );
   }
 
-  // SubCatType
-
-  Widget _subCatTypeDialogWidget(BuildContext context, StateSetter setState,
-      List<SubCatTypeCount> _subCatTypeCounts) {
-    return AlertDialog(
-      title: Text('Type'),
-      content: Container(
-        height: _subCatTypeCounts.length <= 6
-            ? MediaQuery.of(context).size.height / 3
-            : MediaQuery.of(context).size.height,
-        width: 300.0,
-        child: ListView.builder(
-          shrinkWrap: true,
-          itemCount: _subCatTypeCounts.length,
-          itemBuilder: (BuildContext context, int index) {
-            return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
-              controlAffinity: ListTileControlAffinity.leading,
-              title: Text(
-                  '${_subCatTypeCounts[index].subCatType} (${_subCatTypeCounts[index].count})'),
-              value: _subCatTypeCounts[index].value,
-              onChanged: (value) {
-                setState(() {
-                  _subCatTypeCounts[index].value = value;
-                  if (_subCatTypeCounts.any((e) => e.value == true)) {
-                    if (filterFields.any((e) => e == 'subCatType')) {
-                    } else {
-                      filterFields.add('subCatType');
-                    }
-                  } else {
-                    if (filterFields.any((e) => e == 'subCatType')) {
-                      filterFields.remove('subCatType');
-                    }
-                  }
-                });
-              },
-            );
-          },
-        ),
-      ),
-      actions: <Widget>[
-        _actionDialogWidget('subCatType'),
-      ],
-    );
-  }
-
   // Engine
 
   Widget _engineDialogWidget(BuildContext context, StateSetter setState,
       List<EngineCount> _engineCounts) {
     return AlertDialog(
-      title: Text('Engine'),
+      title: const Text('Engine'),
       content: Container(
         height: _engineCounts.length <= 6
             ? MediaQuery.of(context).size.height / 3
@@ -3232,7 +3584,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           itemCount: _engineCounts.length,
           itemBuilder: (BuildContext context, int index) {
             return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
+              activeColor: bPrimaryColor,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
                   '${_engineCounts[index].engine} (${_engineCounts[index].count})'),
@@ -3267,7 +3619,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   Widget _transmissionDialogWidget(BuildContext context, StateSetter setState,
       List<TransmissionCount> _transmissionCounts) {
     return AlertDialog(
-      title: Text('Transmission'),
+      title: const Text('Transmission'),
       content: Container(
         height: _transmissionCounts.length <= 6
             ? MediaQuery.of(context).size.height / 3
@@ -3278,7 +3630,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           itemCount: _transmissionCounts.length,
           itemBuilder: (BuildContext context, int index) {
             return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
+              activeColor: bPrimaryColor,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
                   '${_transmissionCounts[index].transmission} (${_transmissionCounts[index].count})'),
@@ -3308,12 +3660,58 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
     );
   }
 
+  // bodyType
+
+  Widget _bodyTypeDialogWidget(BuildContext context, StateSetter setState,
+      List<BodyTypeCount> _bodyTypeCounts) {
+    return AlertDialog(
+      title: const Text('Body Type'),
+      content: Container(
+        height: _bodyTypeCounts.length <= 6
+            ? MediaQuery.of(context).size.height / 3
+            : MediaQuery.of(context).size.height,
+        width: 300.0,
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: _bodyTypeCounts.length,
+          itemBuilder: (BuildContext context, int index) {
+            return CheckboxListTile(
+              activeColor: bPrimaryColor,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: Text(
+                  '${_bodyTypeCounts[index].bodyType} (${_bodyTypeCounts[index].count})'),
+              value: _bodyTypeCounts[index].value,
+              onChanged: (value) {
+                setState(() {
+                  _bodyTypeCounts[index].value = value;
+                  if (_bodyTypeCounts.any((e) => e.value == true)) {
+                    if (filterFields.any((e) => e == 'bodyType')) {
+                    } else {
+                      filterFields.add('bodyType');
+                    }
+                  } else {
+                    if (filterFields.any((e) => e == 'bodyType')) {
+                      filterFields.remove('bodyType');
+                    }
+                  }
+                });
+              },
+            );
+          },
+        ),
+      ),
+      actions: <Widget>[
+        _actionDialogWidget('bodyType'),
+      ],
+    );
+  }
+
   // driveType
 
   Widget _driveTypeDialogWidget(BuildContext context, StateSetter setState,
       List<DriveTypeCount> _driveTypeCounts) {
     return AlertDialog(
-      title: Text('Drive Type'),
+      title: const Text('Drive Type'),
       content: Container(
         height: _driveTypeCounts.length <= 6
             ? MediaQuery.of(context).size.height / 3
@@ -3324,7 +3722,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           itemCount: _driveTypeCounts.length,
           itemBuilder: (BuildContext context, int index) {
             return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
+              activeColor: bPrimaryColor,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
                   '${_driveTypeCounts[index].driveType} (${_driveTypeCounts[index].count})'),
@@ -3359,7 +3757,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   Widget _fuelTypeDialogWidget(BuildContext context, StateSetter setState,
       List<FuelTypeCount> _fuelTypeCounts) {
     return AlertDialog(
-      title: Text('Fuel Type'),
+      title: const Text('Fuel Type'),
       content: Container(
         height: _fuelTypeCounts.length <= 6
             ? MediaQuery.of(context).size.height / 3
@@ -3370,7 +3768,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           itemCount: _fuelTypeCounts.length,
           itemBuilder: (BuildContext context, int index) {
             return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
+              activeColor: bPrimaryColor,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
                   '${_fuelTypeCounts[index].fuelType} (${_fuelTypeCounts[index].count})'),
@@ -3407,7 +3805,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
       StateSetter setState,
       List<NumberOfCylindersCount> _numberOfCylindersCounts) {
     return AlertDialog(
-      title: Text('Number of Cylinders'),
+      title: const Text('Number of Cylinders'),
       content: Container(
         height: _numberOfCylindersCounts.length <= 6
             ? MediaQuery.of(context).size.height / 3
@@ -3418,7 +3816,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           itemCount: _numberOfCylindersCounts.length,
           itemBuilder: (BuildContext context, int index) {
             return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
+              activeColor: bPrimaryColor,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
                   '${_numberOfCylindersCounts[index].numberOfCylinders} (${_numberOfCylindersCounts[index].count})'),
@@ -3453,7 +3851,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   Widget _exteriorColorDialogWidget(BuildContext context, StateSetter setState,
       List<ExteriorColorCount> _exteriorColorCounts) {
     return AlertDialog(
-      title: Text('Exterior Color'),
+      title: const Text('Exterior Color'),
       content: Container(
         height: _exteriorColorCounts.length <= 6
             ? MediaQuery.of(context).size.height / 3
@@ -3464,7 +3862,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           itemCount: _exteriorColorCounts.length,
           itemBuilder: (BuildContext context, int index) {
             return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
+              activeColor: bPrimaryColor,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
                   '${_exteriorColorCounts[index].exteriorColor} (${_exteriorColorCounts[index].count})'),
@@ -3499,7 +3897,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   Widget _interiorColorDialogWidget(BuildContext context, StateSetter setState,
       List<InteriorColorCount> _interiorColorCounts) {
     return AlertDialog(
-      title: Text('Exterior Color'),
+      title: const Text('Interior Color'),
       content: Container(
         height: _interiorColorCounts.length <= 6
             ? MediaQuery.of(context).size.height / 3
@@ -3510,7 +3908,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           itemCount: _interiorColorCounts.length,
           itemBuilder: (BuildContext context, int index) {
             return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
+              activeColor: bPrimaryColor,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
                   '${_interiorColorCounts[index].interiorColor} (${_interiorColorCounts[index].count})'),
@@ -3545,7 +3943,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   Widget _forSaleByDialogWidget(BuildContext context, StateSetter setState,
       List<ForSaleByCount> _forSaleByCounts) {
     return AlertDialog(
-      title: Text('Seller Type'),
+      title: const Text('Seller Type'),
       content: Container(
         height: _forSaleByCounts.length <= 6
             ? MediaQuery.of(context).size.height / 3
@@ -3556,7 +3954,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           itemCount: _forSaleByCounts.length,
           itemBuilder: (BuildContext context, int index) {
             return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
+              activeColor: bPrimaryColor,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
                   '${_forSaleByCounts[index].forSaleBy} (${_forSaleByCounts[index].count})'),
@@ -3586,12 +3984,58 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
     );
   }
 
+  // typeOfAd
+
+  Widget _typeOfAdDialogWidget(BuildContext context, StateSetter setState,
+      List<TypeOfAdCount> _typeOfAdCounts) {
+    return AlertDialog(
+      title: const Text('Seller Type'),
+      content: Container(
+        height: _typeOfAdCounts.length <= 6
+            ? MediaQuery.of(context).size.height / 3
+            : MediaQuery.of(context).size.height,
+        width: 300.0,
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: _typeOfAdCounts.length,
+          itemBuilder: (BuildContext context, int index) {
+            return CheckboxListTile(
+              activeColor: bPrimaryColor,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: Text(
+                  '${_typeOfAdCounts[index].typeOfAd} (${_typeOfAdCounts[index].count})'),
+              value: _typeOfAdCounts[index].value,
+              onChanged: (value) {
+                setState(() {
+                  _typeOfAdCounts[index].value = value;
+                  if (_typeOfAdCounts.any((e) => e.value == true)) {
+                    if (filterFields.any((e) => e == 'typeOfAd')) {
+                    } else {
+                      filterFields.add('typeOfAd');
+                    }
+                  } else {
+                    if (filterFields.any((e) => e == 'typeOfAd')) {
+                      filterFields.remove('typeOfAd');
+                    }
+                  }
+                });
+              },
+            );
+          },
+        ),
+      ),
+      actions: <Widget>[
+        _actionDialogWidget('typeOfAd'),
+      ],
+    );
+  }
+
   // ListingStatus
 
   Widget _listingStatusDialogWidget(BuildContext context, StateSetter setState,
       List<ListingStatusCount> _listingStatusCounts) {
     return AlertDialog(
-      title: Text('Listing Status'),
+      title: const Text('Listing Status'),
       content: Container(
         height: _listingStatusCounts.length <= 6
             ? MediaQuery.of(context).size.height / 3
@@ -3602,7 +4046,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           itemCount: _listingStatusCounts.length,
           itemBuilder: (BuildContext context, int index) {
             return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
+              activeColor: bPrimaryColor,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
                   '${_listingStatusCounts[index].listingStatus} (${_listingStatusCounts[index].count})'),
@@ -3637,7 +4081,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   Widget _prodConditionDialogWidget(BuildContext context, StateSetter setState,
       List<ProdConditionCount> _prodConditionCounts) {
     return AlertDialog(
-      title: Text('Condition'),
+      title: const Text('Condition'),
       content: Container(
         height: _prodConditionCounts.length <= 6
             ? MediaQuery.of(context).size.height / 3
@@ -3648,7 +4092,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           itemCount: _prodConditionCounts.length,
           itemBuilder: (BuildContext context, int index) {
             return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
+              activeColor: bPrimaryColor,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
                   '${_prodConditionCounts[index].prodCondition} (${_prodConditionCounts[index].count})'),
@@ -3683,7 +4127,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   Widget _mileageDialogWidget(BuildContext context, StateSetter setState,
       List<MileageCount> _mileageCounts) {
     return AlertDialog(
-      title: Text('Mileage'),
+      title: const Text('Mileage'),
       content: Container(
         height: _mileageCounts.length <= 6
             ? MediaQuery.of(context).size.height / 3
@@ -3694,7 +4138,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
           itemCount: _mileageCounts.length,
           itemBuilder: (BuildContext context, int index) {
             return CheckboxListTile(
-              activeColor: Theme.of(context).primaryColor,
+              activeColor: bPrimaryColor,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
                   '${_mileageCounts[index].mileage} (${_mileageCounts[index].count})'),
@@ -3728,7 +4172,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
   Widget _priceDialogWidget(BuildContext context, StateSetter setState) {
     return AlertDialog(
-      title: Text('Price'),
+      title: const Text('Price'),
       content: Container(
         height: MediaQuery.of(context).size.height / 4,
         child: Form(
@@ -3741,11 +4185,11 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                   'Min',
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 5,
               ),
               Container(
-                color: Theme.of(context).scaffoldBackgroundColor,
+                color: bScaffoldBackgroundColor,
                 height: MediaQuery.of(context).size.height / 15,
                 child: TextFormField(
                   controller: _controllerMinPrice,
@@ -3757,9 +4201,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                         _controllerMinPrice.clear();
                         minPrice = '';
                       },
-                      icon: Icon(Icons.clear),
+                      icon: const Icon(Icons.clear),
                     ),
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
                     // if (value.isEmpty) {
@@ -3786,20 +4230,20 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                   },
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 10,
               ),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
+                child: const Text(
                   'Max',
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 5,
               ),
               Container(
-                color: Theme.of(context).scaffoldBackgroundColor,
+                color: bScaffoldBackgroundColor,
                 height: MediaQuery.of(context).size.height / 15,
                 child: TextFormField(
                   key: ValueKey('maxPrice'),
@@ -3811,9 +4255,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                         _controllerMaxPrice.clear();
                         maxPrice = '';
                       },
-                      icon: Icon(Icons.clear),
+                      icon: const Icon(Icons.clear),
                     ),
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
                     // if (value.isEmpty) {
@@ -3853,7 +4297,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
   Widget _yearDialogWidget(BuildContext context, StateSetter setState) {
     return AlertDialog(
-      title: Text('Year'),
+      title: const Text('Year'),
       content: Container(
         height: MediaQuery.of(context).size.height / 4,
         child: Form(
@@ -3862,15 +4306,15 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             children: [
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
+                child: const Text(
                   'Min',
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 5,
               ),
               Container(
-                color: Theme.of(context).scaffoldBackgroundColor,
+                color: bScaffoldBackgroundColor,
                 height: MediaQuery.of(context).size.height / 15,
                 child: TextFormField(
                   controller: _controllerMinYear,
@@ -3882,9 +4326,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                         _controllerMinYear.clear();
                         minYear = '';
                       },
-                      icon: Icon(Icons.clear),
+                      icon: const Icon(Icons.clear),
                     ),
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
                     // if (value.isEmpty) {
@@ -3910,20 +4354,20 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                   },
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 10,
               ),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
+                child: const Text(
                   'Max',
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 5,
               ),
               Container(
-                color: Theme.of(context).scaffoldBackgroundColor,
+                color: bScaffoldBackgroundColor,
                 height: MediaQuery.of(context).size.height / 15,
                 child: TextFormField(
                   controller: _controllerMaxYear,
@@ -3936,9 +4380,9 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                         _controllerMaxYear.clear();
                         maxYear = '';
                       },
-                      icon: Icon(Icons.clear),
+                      icon: const Icon(Icons.clear),
                     ),
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
                     // if (value.isEmpty) {
@@ -3985,10 +4429,10 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             width: MediaQuery.of(context).size.width / 3,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                primary: Theme.of(context).backgroundColor,
-                onPrimary: Theme.of(context).disabledColor,
-                side: BorderSide(
-                  color: Theme.of(context).primaryColor,
+                primary: bBackgroundColor,
+                onPrimary: bDisabledColor,
+                side: const BorderSide(
+                  color: bPrimaryColor,
                   width: 1,
                 ),
                 elevation: 0.0,
@@ -3998,14 +4442,14 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                   Navigator.of(context).pop();
                 });
               },
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
           ),
           Container(
             width: MediaQuery.of(context).size.width / 3,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                primary: Theme.of(context).primaryColor,
+                primary: bPrimaryColor,
               ),
               onPressed: () {
                 if (formKey.currentState.validate()) {
@@ -4040,7 +4484,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                   });
                 }
               },
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ),
         ],
@@ -4058,10 +4502,10 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
             width: MediaQuery.of(context).size.width / 3,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                primary: Theme.of(context).backgroundColor,
-                onPrimary: Theme.of(context).disabledColor,
-                side: BorderSide(
-                  color: Theme.of(context).primaryColor,
+                primary: bBackgroundColor,
+                onPrimary: bDisabledColor,
+                side: const BorderSide(
+                  color: bPrimaryColor,
                   width: 1,
                 ),
                 elevation: 0.0,
@@ -4071,14 +4515,14 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                   Navigator.of(context).pop();
                 });
               },
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
           ),
           Container(
             width: MediaQuery.of(context).size.width / 3,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                primary: Theme.of(context).primaryColor,
+                primary: bPrimaryColor,
               ),
               onPressed: () {
                 setState(() {
@@ -4087,7 +4531,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                   Navigator.of(context).pop();
                 });
               },
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ),
         ],

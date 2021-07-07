@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Product {
   String prodName;
   String catName;
-  String subCatDocId;
+  String subCatType;
   String prodDes;
   String sellerNotes;
   String year; // Can be Auto generated from API
@@ -26,12 +26,13 @@ class Product {
   String status;
   String forSaleBy;
   String listingStatus;
+  String typeOfAd;
   Timestamp createdAt;
 
   Product({
     this.prodName,
     this.catName,
-    this.subCatDocId,
+    this.subCatType,
     this.prodDes,
     this.sellerNotes,
     this.year, // Can be Auto generated from API
@@ -53,6 +54,7 @@ class Product {
     this.status,
     this.forSaleBy,
     this.listingStatus,
+    this.typeOfAd,
     this.createdAt,
   });
 }
@@ -61,7 +63,7 @@ class Product {
 class ProductDistance {
   String prodName;
   String catName;
-  String subCatDocId;
+  String subCatType;
   String prodDes;
   String sellerNotes;
   String year; // Can be Auto generated from API
@@ -88,7 +90,7 @@ class ProductDistance {
   ProductDistance({
     this.prodName,
     this.catName,
-    this.subCatDocId,
+    this.subCatType,
     this.prodDes,
     this.sellerNotes,
     this.year, // Can be Auto generated from API
@@ -122,6 +124,7 @@ class CtmSpecialInfo {
   String make; // Can be Auto generated from API
   String model; // Can be Auto generated from API
   String vehicleType; // Can be Auto generated from API
+  String vehicleTypeYear;
   String mileage;
   String vin;
   String engine; // Can be Auto generated from API
@@ -147,6 +150,7 @@ class CtmSpecialInfo {
     this.make, // Can be Auto generated from API
     this.model, // Can be Auto generated from API
     this.vehicleType, // Can be Auto generated from API
+    this.vehicleTypeYear,
     this.mileage,
     this.vin,
     this.engine, // Can be Auto generated from API
@@ -165,22 +169,6 @@ class CtmSpecialInfo {
     this.transmission, // Can be Auto generated from API
     this.steeringLocation, // Can be Auto generated from API
     this.ctmSpecialInfoDocId,
-  });
-}
-
-// Model to store temp product data
-
-class TempProd {
-  String userId;
-  String catName;
-  String imageUrl;
-  String validation;
-
-  TempProd({
-    this.userId,
-    this.catName,
-    this.imageUrl,
-    this.validation,
   });
 }
 
@@ -230,6 +218,15 @@ class DeliveryInfo {
   });
 }
 
+// Model to store Type of ad
+class TypeOfAd {
+  String typeOfAd;
+
+  TypeOfAd({
+    this.typeOfAd,
+  });
+}
+
 // Model to store forSaleBy
 class ForSaleBy {
   String forSaleBy;
@@ -248,6 +245,51 @@ class FuelType {
   });
 }
 
+// Model to store Vehicle Type
+class VehicleType {
+  String vehicleType;
+
+  VehicleType({
+    this.vehicleType,
+  });
+}
+
+// Model to store Drive Type
+class DriveType {
+  String driveType;
+
+  DriveType({
+    this.driveType,
+  });
+}
+
+// Model to store Body Type
+class BodyType {
+  String bodyType;
+
+  BodyType({
+    this.bodyType,
+  });
+}
+
+// Model to store Sub Model
+class SubModel {
+  String subModel;
+
+  SubModel({
+    this.subModel,
+  });
+}
+
+// Model to store Transmission
+class Transmission {
+  String transmission;
+
+  Transmission({
+    this.transmission,
+  });
+}
+
 // Model to store year
 class Year {
   String year;
@@ -260,18 +302,24 @@ class Year {
 // Model to store make
 class Make {
   String make;
+  String subCatType;
 
   Make({
     this.make,
+    this.subCatType,
   });
 }
 
 // Model to store prod model
 class Model {
   String model;
+  String make;
+  String subCatType;
 
   Model({
     this.model,
+    this.make,
+    this.subCatType,
   });
 }
 
@@ -295,13 +343,15 @@ class ProdImagesSqlDb {
 class MotorFormSqlDb {
   String id;
   String catName;
-  String subCatDocId;
+  String subCatType;
+  String prodName;
   String prodDes;
   String sellerNotes;
   String prodCondition;
   String price;
   String imageUrlFeatured;
   String deliveryInfo;
+  String typeOfAd;
   String year; // Can be Auto generated from API
   String make; // Can be Auto generated from API
   String model; // Can be Auto generated from API
@@ -329,13 +379,15 @@ class MotorFormSqlDb {
   MotorFormSqlDb({
     this.id,
     this.catName,
-    this.subCatDocId,
+    this.subCatType,
+    this.prodName,
     this.prodDes,
     this.sellerNotes,
     this.prodCondition,
     this.price,
     this.imageUrlFeatured,
     this.deliveryInfo,
+    this.typeOfAd,
     this.year, // Can be Auto generated from API
     this.make, // Can be Auto generated from API
     this.model, // Can be Auto generated from API

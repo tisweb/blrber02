@@ -1,13 +1,26 @@
-import 'package:blrber/models/user_detail.dart';
-import 'package:blrber/provider/get_current_location.dart';
-import 'package:blrber/screens/edit_profile.dart';
-import 'package:blrber/screens/settings_screen.dart';
+//Imports for pubspec Packages
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flag/flag.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'display_product_catalog.dart';
+//Imports for Constants
+import '../constants.dart';
+
+//Imports for Widgets
+import './display_product_catalog.dart';
+
+//Imports for Models
+import '../models/user_detail.dart';
+
+//Imports for Provider
+import '../provider/get_current_location.dart';
+
+//Imports for Screens
+import '../screens/edit_profile.dart';
+import '../screens/customer_support.dart';
+import '../screens/settings_screen.dart';
 
 class DisplayProfile extends StatefulWidget {
   @override
@@ -15,34 +28,22 @@ class DisplayProfile extends StatefulWidget {
 }
 
 class _DisplayProfileState extends State<DisplayProfile> {
+  List<UserDetail> userDetails = [];
+  User user;
+  GetCurrentLocation getCurrentLocation = GetCurrentLocation();
   String currentUserName = "";
   List<UserDetail> userDetailsCU = [];
   bool _initialData = false;
+
+  static const double flagHeight = 20.0;
+  static const double flagWidth = 25.0;
+
   @override
-  Widget build(BuildContext context) {
-    final List<UserDetail> userDetails = Provider.of<List<UserDetail>>(context);
-    final getCurrentLocation = Provider.of<GetCurrentLocation>(context);
-    final user = FirebaseAuth.instance.currentUser;
-    // print('calling userDetail in display profile!');
-    // final userDetails =
-    //     Provider.of<UserDetailsProvider>(context, listen: false);
-    // print('called userDetail in display profile!');
-    // UserDetail userData = UserDetail();
-    // if (userDetails != null) {
-    //   userDetails.getUserDetail(user.uid);
-    //   userData = userDetails.userData;
-    // }
+  void didChangeDependencies() {
+    userDetails = Provider.of<List<UserDetail>>(context);
+    getCurrentLocation = Provider.of<GetCurrentLocation>(context);
+    user = FirebaseAuth.instance.currentUser;
 
-    // print('user @ display profile - ${userData.email}');
-
-    // final googleSignin =
-    //     Provider.of<GoogleSignInProvider>(context, listen: false);
-
-    // googleSignin.logout();
-
-    // print('userDetails.length - ${userDetails.length}');
-
-    print('display profile 1 ');
     _initialData = false;
     if (userDetails != null) {
       if (userDetails.length > 0 && user != null) {
@@ -52,138 +53,187 @@ class _DisplayProfileState extends State<DisplayProfile> {
         if (userDetailsCU.length > 0) {
           currentUserName = userDetailsCU[0].userName;
           _initialData = true;
-          print('currentUserName = $currentUserName');
         }
       }
     }
-    print('display profile 2 ');
+    super.didChangeDependencies();
+  }
 
-    // print('user CU - ${userDetailsCU[0].email}');
-
-    // print('user name - ${userDetailsCU[0].userName}');
-    return Scaffold(
-      body: _initialData
-          ? Container(
-              child: Column(
-                children: [
-                  Container(
-                    color: Colors.white,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Flag(
-                          getCurrentLocation.countryCode,
-                          height: 20,
-                          width: 25,
-                          fit: BoxFit.fill,
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.settings),
-                          onPressed: () {
-                            Navigator.of(context)
-                                .pushNamed(SettingsScreen.routeName);
-                          },
-                        )
-                      ],
-                    ),
-                  ),
-                  Container(
-                    color: Colors.white,
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 25,
-                          backgroundImage: userDetailsCU[0].userImageUrl == ""
-                              ? AssetImage(
-                                  'assets/images/default_user_image.png')
-                              : NetworkImage(userDetailsCU[0].userImageUrl),
-                        ),
-                        SizedBox(
-                          width: 10,
-                        ),
-                        Container(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Text(
-                                userDetailsCU[0].displayName,
-                                style: TextStyle(
-                                    fontSize: 20,
-                                    color: Theme.of(context).disabledColor),
-                              ),
-                              Text(
-                                userDetailsCU[0].userType,
-                                style: TextStyle(
-                                    fontSize: 15,
-                                    color: Theme.of(context).disabledColor),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    height: 5,
-                  ),
-                  Container(
-                    color: Colors.white,
-                    child: ListTile(
-                      leading: Icon(Icons.edit),
-                      title: Text(
-                        'Edit Profile',
-                        style: TextStyle(
-                            fontSize: 18,
-                            color: Theme.of(context).disabledColor),
+  @override
+  Widget build(BuildContext context) {
+    return _initialData
+        ? Container(
+            child: Column(
+              children: [
+                Container(
+                  color: bBackgroundColor,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Flag(
+                        getCurrentLocation.countryCode,
+                        height: flagHeight,
+                        width: flagWidth,
+                        fit: BoxFit.fill,
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) {
-                                return EditProfile();
-                              },
-                              fullscreenDialog: true),
-                        );
-                      },
-                    ),
+                      IconButton(
+                        icon: const Icon(Icons.settings),
+                        onPressed: () {
+                          Navigator.of(context)
+                              .pushNamed(SettingsScreen.routeName);
+                        },
+                      )
+                    ],
                   ),
-                  SizedBox(
-                    height: 5,
-                  ),
-                  Container(
-                    color: Colors.white,
-                    child: ListTile(
-                      leading: Icon(Icons.category_outlined),
-                      title: Text(
-                        'Product Catalog',
-                        style: TextStyle(
-                            fontSize: 18,
-                            color: Theme.of(context).disabledColor),
+                ),
+                const Divider(
+                  thickness: 2,
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  color: bBackgroundColor,
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 25,
+                        backgroundImage: userDetailsCU[0].userImageUrl == ""
+                            ? AssetImage('assets/images/default_user_image.png')
+                            : NetworkImage(userDetailsCU[0].userImageUrl),
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) {
-                                return DisplayProductCatalog(
-                                  adminUserPermission: '',
-                                );
-                              },
-                              fullscreenDialog: true),
-                        );
-                      },
+                      const SizedBox(
+                        width: 10,
+                      ),
+                      Container(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Text(
+                              userDetailsCU[0].displayName,
+                              style: const TextStyle(
+                                  fontSize: 20, color: bDisabledColor),
+                            ),
+                            Text(
+                              userDetailsCU[0].userType,
+                              style: const TextStyle(
+                                  fontSize: 15, color: bDisabledColor),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(
+                  thickness: 2,
+                ),
+                Container(
+                  color: bBackgroundColor,
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.edit,
+                      color: bPrimaryColor,
                     ),
+                    title: const Text(
+                      'Edit Profile',
+                      style:
+                          const TextStyle(fontSize: 18, color: bDisabledColor),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) {
+                              return EditProfile();
+                            },
+                            fullscreenDialog: true),
+                      );
+                    },
                   ),
-                  SizedBox(
-                    height: 5,
+                ),
+                const Divider(
+                  thickness: 2,
+                ),
+                Container(
+                  color: bBackgroundColor,
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.category_outlined,
+                      color: bPrimaryColor,
+                    ),
+                    title: const Text(
+                      'Product Catalog',
+                      style:
+                          const TextStyle(fontSize: 18, color: bDisabledColor),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) {
+                              return DisplayProductCatalog(
+                                adminUserPermission: '',
+                              );
+                            },
+                            fullscreenDialog: true),
+                      );
+                    },
                   ),
-                ],
-              ),
-            )
-          : Center(
-              child: CircularProgressIndicator(),
+                ),
+                const Divider(
+                  thickness: 2,
+                ),
+                Container(
+                  color: bBackgroundColor,
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.support_agent,
+                      color: bPrimaryColor,
+                    ),
+                    title: const Text(
+                      'Customer Support',
+                      style:
+                          const TextStyle(fontSize: 18, color: bDisabledColor),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) {
+                              return CustomerSupport();
+                            },
+                            fullscreenDialog: true),
+                      );
+                    },
+                  ),
+                ),
+                const Divider(
+                  thickness: 2,
+                ),
+                Container(
+                  color: bBackgroundColor,
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.settings,
+                      color: bPrimaryColor,
+                    ),
+                    title: const Text(
+                      'Settings',
+                      style:
+                          const TextStyle(fontSize: 18, color: bDisabledColor),
+                    ),
+                    onTap: () {
+                      Navigator.of(context).pushNamed(SettingsScreen.routeName);
+                    },
+                  ),
+                ),
+                const Divider(
+                  thickness: 2,
+                ),
+              ],
             ),
-    );
+          )
+        : const Center(
+            child: CupertinoActivityIndicator(),
+          );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view_gallery.dart';
+import '../constants.dart';
 import '../models/product.dart';
 
 class ViewPhotos extends StatefulWidget {
@@ -41,7 +42,7 @@ class _ViewPhotosState extends State<ViewPhotos> {
           text: TextSpan(
             text: widget.pageTitle,
             style: TextStyle(
-              color: Colors.white,
+              color: bBackgroundColor,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -49,7 +50,7 @@ class _ViewPhotosState extends State<ViewPhotos> {
               TextSpan(
                 text: '(',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: bBackgroundColor,
                   fontSize: 18,
                   fontWeight: FontWeight.normal,
                 ),
@@ -57,7 +58,7 @@ class _ViewPhotosState extends State<ViewPhotos> {
               TextSpan(
                 text: '${currentIndex + 1}',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: bBackgroundColor,
                   fontSize: 18,
                   fontWeight: FontWeight.normal,
                 ),
@@ -65,7 +66,7 @@ class _ViewPhotosState extends State<ViewPhotos> {
               TextSpan(
                 text: ' of ',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: bBackgroundColor,
                   fontSize: 18,
                   fontWeight: FontWeight.normal,
                 ),
@@ -73,7 +74,7 @@ class _ViewPhotosState extends State<ViewPhotos> {
               TextSpan(
                 text: '${widget.imageList.length}',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: bBackgroundColor,
                   fontSize: 18,
                   fontWeight: FontWeight.normal,
                 ),
@@ -81,7 +82,7 @@ class _ViewPhotosState extends State<ViewPhotos> {
               TextSpan(
                 text: ')',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: bBackgroundColor,
                   fontSize: 18,
                   fontWeight: FontWeight.normal,
                 ),

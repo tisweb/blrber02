@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 // Import services
+import '../constants.dart';
 import '../services/foundation.dart';
 
 //Imports for Widgets
@@ -21,9 +22,9 @@ class FavoritesScreen extends StatelessWidget {
             navigationBar: CupertinoNavigationBar(
               middle: Text(
                 'Favorites',
-                style: TextStyle(color: Theme.of(context).disabledColor),
+                style: TextStyle(color: bDisabledColor),
               ),
-              backgroundColor: Theme.of(context).backgroundColor,
+              backgroundColor: bBackgroundColor,
             ),
             child: StreamBuilder(
                 stream: FirebaseAuth.instance.authStateChanges(),
@@ -37,11 +38,15 @@ class FavoritesScreen extends StatelessWidget {
           )
         : Scaffold(
             appBar: AppBar(
+              centerTitle: true,
               title: Text(
                 'Favorites',
-                style: TextStyle(color: Theme.of(context).disabledColor),
+                style: TextStyle(
+                    color: bDisabledColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 25),
               ),
-              backgroundColor: Theme.of(context).backgroundColor,
+              backgroundColor: bBackgroundColor,
               elevation: 0.0,
             ),
             body: StreamBuilder(

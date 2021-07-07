@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
+import '../constants.dart';
+
 class UserPostCatalog extends StatefulWidget {
   final UserDetail userData;
   UserPostCatalog({Key key, this.userData}) : super(key: key);
@@ -81,9 +83,11 @@ class _UserPostCatalogState extends State<UserPostCatalog> {
             children: [
               CircleAvatar(
                 radius: 35,
-                backgroundImage: NetworkImage(
-                  widget.userData.userImageUrl,
-                ),
+                backgroundImage: widget.userData.userImageUrl == ""
+                    ? AssetImage('assets/images/default_user_image.png')
+                    : NetworkImage(
+                        widget.userData.userImageUrl,
+                      ),
               ),
               SizedBox(
                 width: 10,
@@ -130,9 +134,11 @@ class _UserPostCatalogState extends State<UserPostCatalog> {
               ),
               CircleAvatar(
                 radius: 30,
-                backgroundImage: NetworkImage(
-                  widget.userData.companyLogoUrl,
-                ),
+                backgroundImage: widget.userData.companyLogoUrl == ""
+                    ? AssetImage('assets/images/default_user_image.png')
+                    : NetworkImage(
+                        widget.userData.companyLogoUrl,
+                      ),
               ),
             ],
           ),
@@ -143,7 +149,7 @@ class _UserPostCatalogState extends State<UserPostCatalog> {
                 itemCount: products.length,
                 itemBuilder: (BuildContext context, int j) {
                   return Container(
-                    color: Colors.white,
+                    color: bBackgroundColor,
                     padding: EdgeInsets.all(5),
                     child: ListTile(
                       onTap: () {
@@ -181,7 +187,7 @@ class _UserPostCatalogState extends State<UserPostCatalog> {
                                           '...'
                                       : products[j].prodName,
                                   style: TextStyle(
-                                      color: Theme.of(context).disabledColor,
+                                      color: bDisabledColor,
                                       fontSize: 17,
                                       fontWeight: FontWeight.bold),
                                 ),
@@ -189,7 +195,7 @@ class _UserPostCatalogState extends State<UserPostCatalog> {
                                   text: TextSpan(
                                     text: _currencySymbol,
                                     style: TextStyle(
-                                      color: Theme.of(context).disabledColor,
+                                      color: bDisabledColor,
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -210,7 +216,7 @@ class _UserPostCatalogState extends State<UserPostCatalog> {
                                   text: TextSpan(
                                     text: 'Status : ',
                                     style: TextStyle(
-                                      color: Theme.of(context).disabledColor,
+                                      color: bDisabledColor,
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,
                                     ),

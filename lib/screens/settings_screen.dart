@@ -1,7 +1,6 @@
 import 'package:blrber/models/product.dart';
 import 'package:blrber/models/user_detail.dart';
 import 'package:blrber/provider/get_current_location.dart';
-import 'package:blrber/screens/help_center.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:darq/darq.dart';
+
+import '../constants.dart';
 
 class SettingsScreen extends StatefulWidget {
   static const routeName = '/settngs_screen';
@@ -83,7 +84,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,
-            color: Theme.of(context).disabledColor,
+            color: bDisabledColor,
           ),
           onPressed: () {
             Navigator.of(context).pop();
@@ -91,11 +92,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         title: Text(
           'Settings',
-          style: TextStyle(color: Theme.of(context).disabledColor),
+          style: TextStyle(color: bDisabledColor),
         ),
-        backgroundColor: Theme.of(context).backgroundColor,
+        backgroundColor: bBackgroundColor,
       ),
-      backgroundColor: Theme.of(context).backgroundColor,
+      backgroundColor: bBackgroundColor,
       body: Container(
         padding: EdgeInsets.all(15),
         child: Column(
@@ -103,8 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ListTile(
               leading: Text(
                 'Country',
-                style: TextStyle(
-                    fontSize: 18, color: Theme.of(context).disabledColor),
+                style: TextStyle(fontSize: 18, color: bDisabledColor),
               ),
               trailing: Flag(
                 getCurrentLocation.countryCode,
@@ -118,8 +118,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 leading: Text(
                   'Buying Country',
-                  style: TextStyle(
-                      fontSize: 18, color: Theme.of(context).disabledColor),
+                  style: TextStyle(fontSize: 18, color: bDisabledColor),
                 ),
                 trailing: Flag(
                   userDataUpdated != null
@@ -161,48 +160,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ListTile(
               leading: Text(
                 'Currency',
-                style: TextStyle(
-                    fontSize: 18, color: Theme.of(context).disabledColor),
+                style: TextStyle(fontSize: 18, color: bDisabledColor),
               ),
               trailing: Text(
                 getCurrentLocation.currencyCode,
-                style: TextStyle(
-                    fontSize: 15, color: Theme.of(context).disabledColor),
+                style: TextStyle(fontSize: 15, color: bDisabledColor),
               ),
               onTap: () {},
             ),
             ListTile(
               leading: Text(
                 'Language',
-                style: TextStyle(
-                    fontSize: 18, color: Theme.of(context).disabledColor),
+                style: TextStyle(fontSize: 18, color: bDisabledColor),
               ),
               trailing: Text(
                 'English',
-                style: TextStyle(
-                    fontSize: 15, color: Theme.of(context).disabledColor),
+                style: TextStyle(fontSize: 15, color: bDisabledColor),
               ),
               onTap: () {
                 print('listtile1');
               },
             ),
-            ListTile(
-              leading: Text(
-                'Help Center',
-                style: TextStyle(
-                    fontSize: 18, color: Theme.of(context).disabledColor),
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) {
-                        return HelpCenter();
-                      },
-                      fullscreenDialog: true),
-                );
-              },
-            ),
+            // ListTile(
+            //   leading: Text(
+            //     'Help Center',
+            //     style: TextStyle(
+            //         fontSize: 18, color: bDisabledColor),
+            //   ),
+            //   onTap: () {
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //           builder: (_) {
+            //             return HelpCenter();
+            //           },
+            //           fullscreenDialog: true),
+            //     );
+            //   },
+            // ),
             ElevatedButton(
               onPressed: () {
                 FirebaseAuth.instance.signOut();

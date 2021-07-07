@@ -1,18 +1,26 @@
-import 'package:blrber/models/category.dart';
-import 'package:blrber/models/user_detail.dart';
-import 'package:blrber/provider/get_current_location.dart';
-import 'package:blrber/screens/auth_screen.dart';
-import 'package:blrber/screens/product_detail_screen.dart';
+//Imports for pubspec Packages
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
+import 'package:flutter_switch/flutter_switch.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
 import 'package:darq/darq.dart';
 
+//Imports for Constants
+import '../constants.dart';
+//Imports for Models
 import '../models/product.dart';
+import '../models/category.dart';
+import '../models/user_detail.dart';
+//Imports for Provider
+import '../provider/get_current_location.dart';
+//Imports for Screens
+import '../screens/auth_screen.dart';
+import '../screens/motor_filter_screen.dart';
+import '../screens/product_detail_screen.dart';
 
 class DisplayProductGrid extends StatefulWidget {
   final String inCatName;
@@ -37,7 +45,7 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
 
   bool isFavorite = false;
   bool _subCatTypeSelected = false;
-  Icon favoriteIcon = Icon(Icons.favorite_border);
+  // Icon favoriteIcon = Icon(Icons.favorite_border);
 
   String _countryCode = "";
 
@@ -47,9 +55,12 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
   List<Product> products = [];
   User user;
 
-  String _subCatDocId = "";
+  String _subCatType = "";
   List<SubCategory> subCategories, availableProdSC = [];
   List<FavoriteProd> favoriteProd = [];
+  String currCondition = "";
+  bool status = false;
+  String _prodCondition = "";
 
   GetCurrentLocation getCurrentLocation = GetCurrentLocation();
 
@@ -97,13 +108,9 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
         }
       }
     }
-    // ProductDistance prodDis = ProductDistance();
-    // List<ProductDistance> productDistance = [];
-    print('------check1------');
+
     products = Provider.of<List<Product>>(context);
-    print('------check2------');
     subCategories = Provider.of<List<SubCategory>>(context);
-    print('------check3------');
     favoriteProd = Provider.of<List<FavoriteProd>>(context);
     getCurrentLocation = Provider.of<GetCurrentLocation>(context);
 
@@ -122,39 +129,72 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
 
     if (products != null) {
       if (widget.inDisplayType == "Category") {
-        if ((widget.inProdCondition == '') ||
-            (widget.inProdCondition == 'ALL')) {
-          products =
-              products.where((e) => e.catName == widget.inCatName).toList();
-        } else {
-          products = products
-              .where((e) =>
-                  (e.catName == widget.inCatName) &&
-                  (e.prodCondition == widget.inProdCondition))
-              .toList();
-        }
+        products =
+            products.where((e) => e.catName == widget.inCatName).toList();
       } else if (widget.inDisplayType == "Search") {
+        var singularCatName =
+            widget.inCatName.substring(0, (widget.inCatName.length - 1));
+
         products = products
             .where((e) =>
                 (e.catName
                     .toLowerCase()
-                    .contains(widget.inCatName.split(" ")[0].toLowerCase())) ||
-                (e.prodName
-                    .toLowerCase()
-                    .contains(widget.inCatName.split(" ")[0].toLowerCase())) ||
+                    .trim()
+                    .contains(widget.inCatName.toLowerCase().trim())) ||
                 (e.catName
                     .toLowerCase()
-                    .contains(widget.inCatName.split(" ")[1].toLowerCase())) ||
+                    .trim()
+                    .contains(singularCatName.toLowerCase().trim())) ||
                 (e.prodName
                     .toLowerCase()
-                    .contains(widget.inCatName.split(" ")[1].toLowerCase())) ||
+                    .trim()
+                    .contains(widget.inCatName.toLowerCase().trim())) ||
+                (e.prodName
+                    .toLowerCase()
+                    .trim()
+                    .contains(singularCatName.toLowerCase().trim())) ||
+                (e.subCatType
+                    .toLowerCase()
+                    .trim()
+                    .contains(widget.inCatName.toLowerCase().trim())) ||
+                (e.subCatType
+                    .toLowerCase()
+                    .trim()
+                    .contains(singularCatName.toLowerCase().trim())) ||
+                (e.prodDes
+                    .toLowerCase()
+                    .trim()
+                    .contains(widget.inCatName.toLowerCase().trim())) ||
+                (e.prodDes
+                    .toLowerCase()
+                    .trim()
+                    .contains(singularCatName.toLowerCase().trim())) ||
+                (e.sellerNotes
+                    .toLowerCase()
+                    .trim()
+                    .contains(widget.inCatName.toLowerCase().trim())) ||
+                (e.sellerNotes
+                    .toLowerCase()
+                    .trim()
+                    .contains(singularCatName.toLowerCase().trim())) ||
                 (e.make
                     .toLowerCase()
-                    .contains(widget.inCatName.split(" ")[1].toLowerCase())))
+                    .trim()
+                    .contains(widget.inCatName.toLowerCase().trim())) ||
+                (e.make
+                    .toLowerCase()
+                    .trim()
+                    .contains(singularCatName.toLowerCase().trim())) ||
+                (e.model
+                    .toLowerCase()
+                    .trim()
+                    .contains(widget.inCatName.toLowerCase().trim())) ||
+                (e.model.toLowerCase().contains(singularCatName.toLowerCase())))
             .toList();
       } else if (widget.inDisplayType == "Results" &&
           widget.inqueriedProdIdList != null) {
         productsQuery = [];
+
         for (var i = 0; i < widget.inqueriedProdIdList.length; i++) {
           List<Product> prodTemp = [];
           prodTemp = products
@@ -167,28 +207,30 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
         products = productsQuery;
       }
 
-      print('------check4------');
       availableProdSC = [];
       if (products.length > 0) {
         var distinctProductsSC =
-            products.distinct((d) => d.subCatDocId.trim()).toList();
-
-        print('prodCountryCode - ${distinctProductsSC.length}');
+            products.distinct((d) => d.subCatType.trim()).toList();
 
         if (distinctProductsSC.length > 0 && subCategories.length > 0) {
           for (var item in distinctProductsSC) {
-            print('disting cc - ${item.countryCode}');
-            SubCategory subCategory = SubCategory();
-            print('------check4 1------');
-            subCategory = subCategories.firstWhere(
-                (e) => e.subCatDocId.trim() == item.subCatDocId.trim());
-            print('------check4 2------');
-            availableProdSC.add(subCategory);
-            print('------check4 3------');
+            List<SubCategory> subCategory = [];
+
+            subCategory = subCategories
+                .where((e) => e.subCatType.trim() == item.subCatType.trim())
+                .toList();
+            if (subCategory.length > 0) {
+              availableProdSC.add(subCategory[0]);
+            }
           }
         }
 
-        print('------check5------');
+        availableProdSC.sort((a, b) {
+          var aSubCatType = a.subCatType;
+          var bSubCatType = b.subCatType;
+          return bSubCatType.compareTo(aSubCatType);
+        });
+
         for (var i = 0; i < products.length; i++) {
           double distanceD = Geolocator.distanceBetween(
                   getCurrentLocation.latitude,
@@ -206,12 +248,38 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
 
           products[i].distance = distanceS;
         }
-        print('------check6------');
 
         if (_subCatTypeSelected) {
           products = products
-              .where((e) => e.subCatDocId.trim() == _subCatDocId.trim())
+              .where((e) => e.subCatType.trim() == _subCatType.trim())
               .toList();
+        }
+
+        if (products.any((e) => e.prodCondition == 'New') &&
+            products.any((e) => e.prodCondition == 'Used')) {
+          currCondition = "NU";
+        } else {
+          if (products.any((e) => e.prodCondition == 'New')) {
+            currCondition = "N";
+          }
+          if (products.any((e) => e.prodCondition == 'Used')) {
+            currCondition = "U";
+          }
+        }
+
+        if (widget.inDisplayType != "Results") {
+          if (currCondition == "NU") {
+            if (_prodCondition == "New" || _prodCondition == "Used") {
+              products = products
+                  .where((e) => e.prodCondition.trim() == _prodCondition.trim())
+                  .toList();
+            } else {
+              status = true;
+              products = products
+                  .where((e) => e.prodCondition.trim() == "New".trim())
+                  .toList();
+            }
+          }
         }
 
         products.sort((a, b) {
@@ -219,7 +287,6 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
           var bDistance = b.distance;
           return aDistance.compareTo(bDistance);
         });
-        print('------check7------');
       }
     }
   }
@@ -234,268 +301,254 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
     super.dispose();
   }
 
-  // call function to convert
-  // Future<String> getAmounts(
-  //     String prodCurrency, String prodPrice, String currenctCurrency) async {
-  //   print('price before double - $prodPrice');
-  //   double prodPriceDouble = double.parse(prodPrice);
-  //   var amountConverted = await MoneyConverter.convert(
-  //       Currency(Currency.INR, amount: prodPriceDouble),
-  //       Currency(Currency.SEK));
-  //   // setState(() {
-  //   return _convertedPrice = amountConverted.toString();
-  //   // });
-  // }
-
   @override
   Widget build(BuildContext context) {
     _initialGetInfo();
-    // final user = FirebaseAuth.instance.currentUser;
-    // if (user == null) {
-    //   userId = "";
-    // } else {
-    //   userId = user.uid;
-    //   final List<UserDetail> userDetails =
-    //       Provider.of<List<UserDetail>>(context);
-    //   if (userDetails.length > 0 && user != null) {
-    //     userData = userDetails
-    //         .firstWhere((e) => e.userDetailDocId.trim() == userId.trim());
-    //     if (userData != null) {
-    //       _countryCode = userData.buyingCountryCode;
-    //       print('userupdate display product grid');
-    //     }
-    //   }
-    // }
-    // // ProductDistance prodDis = ProductDistance();
-    // // List<ProductDistance> productDistance = [];
-    // print('------check1------');
-    // List<Product> products = Provider.of<List<Product>>(context);
-    // print('------check2------');
-    // List<SubCategory> subCategories = Provider.of<List<SubCategory>>(context);
-    // print('------check3------');
-    // List<FavoriteProd> favoriteProd = Provider.of<List<FavoriteProd>>(context);
-    // final getCurrentLocation = Provider.of<GetCurrentLocation>(context);
 
-    // if (_countryCode.isEmpty) {
-    //   _countryCode = getCurrentLocation.countryCode;
-    // }
-
-    // if (products != null) {
-    //   products = products
-    //       .where((e) =>
-    //           e.status == 'Verified' &&
-    //           e.listingStatus == 'Available' &&
-    //           e.countryCode == _countryCode)
-    //       .toList();
-    // }
-
-    // if (products != null) {
-    //   if (widget.inDisplayType == "Category") {
-    //     if ((widget.inProdCondition == '') ||
-    //         (widget.inProdCondition == 'ALL')) {
-    //       products =
-    //           products.where((e) => e.catName == widget.inCatName).toList();
-    //     } else {
-    //       products = products
-    //           .where((e) =>
-    //               (e.catName == widget.inCatName) &&
-    //               (e.prodCondition == widget.inProdCondition))
-    //           .toList();
-    //     }
-    //   } else if (widget.inDisplayType == "Search") {
-    //     products = products
-    //         .where((e) =>
-    //             (e.catName.toLowerCase() == widget.inCatName.toLowerCase()) ||
-    //             (e.prodName
-    //                 .toLowerCase()
-    //                 .contains(widget.inCatName.toLowerCase())))
-    //         .toList();
-    //   } else if (widget.inDisplayType == "Results" &&
-    //       widget.inqueriedProdIdList != null) {
-    //     productsQuery = [];
-    //     for (var i = 0; i < widget.inqueriedProdIdList.length; i++) {
-    //       List<Product> prodTemp = [];
-    //       prodTemp = products
-    //           .where((p) =>
-    //               p.prodDocId.trim() == widget.inqueriedProdIdList[i].trim())
-    //           .toList();
-    //       productsQuery = productsQuery + prodTemp;
-    //     }
-
-    //     products = productsQuery;
-    //   }
-
-    //   print('------check4------');
-    //   availableProdSC = [];
-    //   if (products.length > 0) {
-    //     var distinctProductsSC =
-    //         products.distinct((d) => d.subCatDocId.trim()).toList();
-
-    //     print('prodCountryCode - ${distinctProductsSC.length}');
-
-    //     if (distinctProductsSC.length > 0 && subCategories.length > 0) {
-    //       for (var item in distinctProductsSC) {
-    //         print('disting cc - ${item.countryCode}');
-    //         SubCategory subCategory = SubCategory();
-    //         print('------check4 1------');
-    //         subCategory = subCategories.firstWhere(
-    //             (e) => e.subCatDocId.trim() == item.subCatDocId.trim());
-    //         print('------check4 2------');
-    //         availableProdSC.add(subCategory);
-    //         print('------check4 3------');
-    //       }
-    //     }
-
-    //     print('------check5------');
-    //     for (var i = 0; i < products.length; i++) {
-    //       double distanceD = Geolocator.distanceBetween(
-    //               getCurrentLocation.latitude,
-    //               getCurrentLocation.longitude,
-    //               products[i].latitude,
-    //               products[i].longitude) /
-    //           1000.round();
-
-    //       String distanceS;
-    //       if (distanceD != null) {
-    //         distanceS = distanceD.round().toString();
-    //       } else {
-    //         distanceS = distanceD.toString();
-    //       }
-
-    //       products[i].distance = distanceS;
-    //     }
-    //     print('------check6------');
-
-    //     if (_subCatTypeSelected) {
-    //       products = products
-    //           .where((e) => e.subCatDocId.trim() == _subCatDocId.trim())
-    //           .toList();
-    //     }
-
-    //     products.sort((a, b) {
-    //       var aDistance = a.distance;
-    //       var bDistance = b.distance;
-    //       return aDistance.compareTo(bDistance);
-    //     });
-    //     print('------check7------');
-    //   }
-    // }
-
-    print(' @@@@@@@@@@@ %%%%% selected prod length - ${products.length}');
     return (products.length > 0)
         ? Container(
-            // color: Colors.white,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(
-                    height: 5,
-                    child: Container(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                    ),
-                  ),
                   if (availableProdSC.length > 0)
                     if (widget.inDisplayType != "Results" &&
                         widget.inDisplayType != "Search")
                       Flexible(
-                        // flex: 3,
                         child: Container(
-                          color: Colors.white,
-                          height: MediaQuery.of(context).size.height / 6,
-                          // padding: const EdgeInsets.all(8.0),
+                          color: bBackgroundColor,
+                          height: MediaQuery.of(context).size.height / 16,
                           child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              if (availableProdSC.length > 1)
-                                Expanded(
-                                  flex: 1,
-                                  child: Center(
-                                    child: GestureDetector(
-                                      child: CircleAvatar(
-                                        backgroundColor: Colors.white,
-                                        radius: 30,
-                                        child: Text('All'),
-                                      ),
-                                      onTap: () {
-                                        setState(() {
-                                          _subCatTypeSelected = false;
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ),
                               Flexible(
-                                flex: 5,
+                                flex: 1,
                                 child: Container(
-                                  padding: EdgeInsets.only(top: 10, left: 10),
-                                  child: ListView.builder(
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount: availableProdSC.length,
-                                    itemBuilder: (BuildContext context, int s) {
-                                      return Container(
-                                        width:
-                                            MediaQuery.of(context).size.width /
-                                                6,
-                                        // height: double.infinity,
-
-                                        child: GestureDetector(
-                                          child: Column(
-                                            // direction: Axis.vertical,
-                                            children: [
-                                              Expanded(
-                                                flex: 2,
-                                                child: CircleAvatar(
-                                                  radius: 30,
-                                                  backgroundImage: NetworkImage(
-                                                    availableProdSC[s].imageUrl,
-                                                  ),
-                                                ),
-                                              ),
-                                              Expanded(
-                                                flex: 1,
-                                                child: Text(
-                                                    '${availableProdSC[s].subCatType}'),
-                                              )
-                                            ],
-                                          ),
-                                          onTap: () {
+                                  width: MediaQuery.of(context).size.width / 4,
+                                  child: currCondition == "NU"
+                                      ? FlutterSwitch(
+                                          width: MediaQuery.of(context)
+                                                  .size
+                                                  .width /
+                                              5,
+                                          activeColor: Colors.lightBlueAccent,
+                                          inactiveColor: bPrimaryColor,
+                                          activeText: 'New',
+                                          inactiveText: 'Used',
+                                          value: status,
+                                          showOnOff: true,
+                                          onToggle: (val) {
                                             setState(() {
-                                              _subCatTypeSelected = true;
-                                              _subCatDocId = availableProdSC[s]
-                                                  .subCatDocId;
+                                              status = val;
+                                              if (status == true) {
+                                                setState(() {
+                                                  _prodCondition = 'New';
+                                                });
+                                              } else {
+                                                setState(() {
+                                                  _prodCondition = 'Used';
+                                                });
+                                              }
                                             });
                                           },
-                                        ),
-                                      );
-                                    },
-                                  ),
+                                        )
+                                      : currCondition == "N"
+                                          ? Container(
+                                              height: 25,
+                                              decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.all(
+                                                    Radius.circular(2),
+                                                  ),
+                                                  color:
+                                                      const Color(0xFF40C4FF)),
+                                              child: const Text(
+                                                "New",
+                                                style: const TextStyle(
+                                                    color: bBackgroundColor,
+                                                    fontSize: 18,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            )
+                                          : Container(
+                                              height: 25,
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.all(
+                                                  Radius.circular(2),
+                                                ),
+                                                color: bPrimaryColor,
+                                              ),
+                                              child: const Text(
+                                                "Used",
+                                                style: const TextStyle(
+                                                    color: bBackgroundColor,
+                                                    fontSize: 18,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
                                 ),
                               ),
+                              Flexible(
+                                  child: Container(
+                                width: MediaQuery.of(context).size.width / 4,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) {
+                                            return MotorFilterScreen(
+                                                catName: widget.inCatName,
+                                                subCatType: _subCatType != ''
+                                                    ? _subCatType
+                                                    : availableProdSC[0]
+                                                        .subCatType);
+                                          },
+                                          fullscreenDialog: true),
+                                    );
+                                  },
+                                  child: Row(
+                                    children: [
+                                      Flexible(
+                                        flex: 1,
+                                        child: const Icon(
+                                          CupertinoIcons.slider_horizontal_3,
+                                          color: bPrimaryColor,
+                                        ),
+                                      ),
+                                      Flexible(
+                                        flex: 1,
+                                        child: const SizedBox(
+                                          width: 10,
+                                        ),
+                                      ),
+                                      Flexible(
+                                        flex: 3,
+                                        child: const Text(
+                                          'Filters',
+                                          style: TextStyle(
+                                            color: bPrimaryColor,
+                                          ),
+                                        ),
+                                      )
+                                    ],
+                                  ),
+                                ),
+                              )),
                             ],
                           ),
                         ),
                       ),
-                  SizedBox(
+                  const SizedBox(
                     height: 5,
-                    child: Container(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                    ),
                   ),
                   Flexible(
-                    // flex: 9,
-                    // height: MediaQuery.of(context).size.height / 2.2,
+                    child: Container(
+                      color: bBackgroundColor,
+                      height: MediaQuery.of(context).size.height / 6,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (availableProdSC.length > 1)
+                            Expanded(
+                              flex: 1,
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.only(top: 10, left: 10),
+                                child: GestureDetector(
+                                  child: const CircleAvatar(
+                                    backgroundColor: bBackgroundColor,
+                                    radius: 30,
+                                    child: const Text('All'),
+                                  ),
+                                  onTap: () {
+                                    setState(() {
+                                      _subCatTypeSelected = false;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                          Flexible(
+                            flex: 5,
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 10, left: 10),
+                              child: ListView.builder(
+                                shrinkWrap: true,
+                                itemExtent: 80,
+                                scrollDirection: Axis.horizontal,
+                                itemCount: availableProdSC.length,
+                                itemBuilder: (BuildContext context, int s) {
+                                  return Container(
+                                    width:
+                                        MediaQuery.of(context).size.width / 6,
+                                    child: GestureDetector(
+                                      child: Column(
+                                        children: [
+                                          Expanded(
+                                            flex: 1,
+                                            child: CircleAvatar(
+                                              radius: 30,
+                                              backgroundImage:
+                                                  availableProdSC[s].imageUrl ==
+                                                              "" ||
+                                                          availableProdSC[s]
+                                                                  .imageUrl ==
+                                                              null
+                                                      ? AssetImage(
+                                                          'assets/images/default_user_image.png',
+                                                        )
+                                                      : NetworkImage(
+                                                          availableProdSC[s]
+                                                              .imageUrl,
+                                                        ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 1,
+                                            child: Text(
+                                              '${availableProdSC[s].subCatType}',
+                                              style:
+                                                  const TextStyle(fontSize: 12),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          )
+                                        ],
+                                      ),
+                                      onTap: () {
+                                        setState(() {
+                                          _subCatTypeSelected = true;
+                                          _subCatType =
+                                              availableProdSC[s].subCatType;
+                                        });
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 5,
+                  ),
+                  Flexible(
                     child: GridView.builder(
-                      // physics: ClampingScrollPhysics(),
                       physics: NeverScrollableScrollPhysics(),
                       shrinkWrap: true,
                       scrollDirection: Axis.vertical,
-
                       itemCount: products.length,
                       itemBuilder: (BuildContext context, int j) {
                         return Container(
-                          color: Colors.white,
-                          padding: EdgeInsets.all(5),
+                          color: bBackgroundColor,
+                          padding: const EdgeInsets.all(5),
                           child: GestureDetector(
                             onTap: () {
                               Navigator.of(context).pushNamed(
@@ -508,8 +561,6 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                   flex: 7,
                                   child: Stack(
                                     children: [
-                                      // products[j].imageUrlFeatured != null
-                                      // ?
                                       FractionallySizedBox(
                                         widthFactor:
                                             1.0, // width w.r.t to parent
@@ -524,70 +575,57 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                           ),
                                         ),
                                       ),
-                                      // : Container(
-                                      //     child: Center(
-                                      //       child: Text('Image Loading...'),
-                                      //     ),
-                                      //   ),
                                       Positioned(
                                         right: 0,
-                                        child: GestureDetector(
-                                          onTap: () {},
-                                          child: IconButton(
-                                              visualDensity:
-                                                  VisualDensity.compact,
-                                              icon: Icon(
-                                                (favoriteProd.any((prod) =>
-                                                        prod.prodDocId ==
-                                                            products[j]
-                                                                .prodDocId &&
-                                                        prod.userId == userId))
-                                                    ? Icons.favorite
-                                                    : Icons.favorite_outline,
-                                                color: Colors.redAccent,
-                                                size: 27,
-                                              ),
-                                              color: Colors.redAccent,
-                                              onPressed: () {
-                                                if ((favoriteProd.any((prod) =>
+                                        child: IconButton(
+                                          visualDensity: VisualDensity.compact,
+                                          icon: Icon(
+                                            (favoriteProd.any((prod) =>
                                                     prod.prodDocId ==
                                                         products[j].prodDocId &&
-                                                    prod.userId == userId))) {
-                                                  print('click f');
-                                                  isFavorite = false;
-                                                } else {
-                                                  print('click s');
-                                                  isFavorite = true;
-                                                }
-                                                if (user == null) {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                        builder: (_) {
-                                                          return AuthScreen();
-                                                        },
-                                                        fullscreenDialog: true),
-                                                  );
-                                                } else {
-                                                  print(
-                                                      'check fav - $isFavorite');
-                                                  if (userId.isEmpty ||
-                                                      userId == null) {
-                                                    return AuthScreen();
-                                                  }
+                                                    prod.userId == userId))
+                                                ? Icons.favorite
+                                                : Icons.favorite_outline,
+                                            color: Colors.redAccent,
+                                            size: 27,
+                                          ),
+                                          color: Colors.redAccent,
+                                          onPressed: () {
+                                            if ((favoriteProd.any((prod) =>
+                                                prod.prodDocId ==
+                                                    products[j].prodDocId &&
+                                                prod.userId == userId))) {
+                                              isFavorite = false;
+                                            } else {
+                                              isFavorite = true;
+                                            }
+                                            if (user == null) {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                    builder: (_) {
+                                                      return AuthScreen();
+                                                    },
+                                                    fullscreenDialog: true),
+                                              );
+                                            } else {
+                                              if (userId.isEmpty ||
+                                                  userId == null) {
+                                                return AuthScreen();
+                                              }
 
-                                                  _manageFavorite(
-                                                      products[j].prodDocId,
-                                                      isFavorite,
-                                                      userId);
-                                                }
-                                              }),
+                                              _manageFavorite(
+                                                  products[j].prodDocId,
+                                                  isFavorite,
+                                                  userId);
+                                            }
+                                          },
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Expanded(
+                                Container(
                                   child: Row(
                                     children: [
                                       widget.inDisplayType == "Results"
@@ -615,9 +653,8 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                                             .substring(0, 15) +
                                                         '...'
                                                     : products[j].prodName,
-                                                style: TextStyle(
-                                                    color: Theme.of(context)
-                                                        .disabledColor,
+                                                style: const TextStyle(
+                                                    color: bDisabledColor,
                                                     fontSize: 17,
                                                     fontWeight:
                                                         FontWeight.bold),
@@ -626,20 +663,19 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                     ],
                                   ),
                                 ),
-                                Expanded(
+                                Container(
                                   child: Align(
                                     alignment: Alignment.centerLeft,
                                     child: RichText(
                                       text: TextSpan(
                                         text: products[j].currencySymbol,
-                                        style: TextStyle(
-                                          color:
-                                              Theme.of(context).disabledColor,
+                                        style: const TextStyle(
+                                          color: bDisabledColor,
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
                                         ),
                                         children: [
-                                          TextSpan(
+                                          const TextSpan(
                                             text: ' ',
                                           ),
                                           TextSpan(
@@ -650,7 +686,7 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                     ),
                                   ),
                                 ),
-                                Expanded(
+                                Container(
                                   child: Row(
                                     children: [
                                       Flexible(
@@ -659,9 +695,8 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                           child: RichText(
                                             text: TextSpan(
                                               text: 'Distance : ',
-                                              style: TextStyle(
-                                                color: Theme.of(context)
-                                                    .disabledColor,
+                                              style: const TextStyle(
+                                                color: bDisabledColor,
                                                 fontSize: 15,
                                                 fontWeight: FontWeight.bold,
                                               ),
@@ -669,10 +704,10 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                                 TextSpan(
                                                   text: products[j].distance,
                                                 ),
-                                                TextSpan(
+                                                const TextSpan(
                                                   text: ' ',
                                                 ),
-                                                TextSpan(
+                                                const TextSpan(
                                                   text: 'KM',
                                                 ),
                                               ],
@@ -680,42 +715,6 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                           ),
                                         ),
                                       ),
-                                      // Align(
-                                      //   alignment: Alignment.centerLeft,
-                                      //   child: RichText(
-                                      //     text: TextSpan(
-                                      //       text: 'Condition : ',
-                                      //       style: TextStyle(
-                                      //         color:
-                                      //             Theme.of(context).disabledColor,
-                                      //         fontSize: 15,
-                                      //         fontWeight: FontWeight.normal,
-                                      //       ),
-                                      //       children: [
-                                      //         TextSpan(
-                                      //           text: products[j].prodCondition,
-                                      //           style: TextStyle(
-                                      //               color: products[j]
-                                      //                           .prodCondition
-                                      //                           .trim()
-                                      //                           .toLowerCase() ==
-                                      //                       'new'
-                                      //                   ? Colors.green
-                                      //                   : Colors.red),
-                                      //         ),
-                                      //       ],
-                                      //     ),
-                                      //   ),
-                                      // ),
-                                      // SizedBox(
-                                      //   width: 5,
-                                      // ),
-                                      Flexible(
-                                        child: Icon(
-                                          Icons.verified,
-                                          color: Colors.green,
-                                        ),
-                                      )
                                     ],
                                   ),
                                 ),
@@ -737,6 +736,6 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
               ),
             ),
           )
-        : Text('Oops!! Products not found... ');
+        : const Text('Oops!! Products not found... ');
   }
 }

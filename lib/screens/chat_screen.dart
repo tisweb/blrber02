@@ -1,5 +1,11 @@
+//Imports for pubspec Packages
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+//Imports for Constants
+import '../constants.dart';
+
+//Imports for Screens
 import './auth_screen.dart';
 import './chat_users.dart';
 
@@ -13,11 +19,13 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        centerTitle: true,
+        title: const Text(
           'Messenger',
-          style: TextStyle(color: Theme.of(context).disabledColor),
+          style: TextStyle(
+              color: bDisabledColor, fontWeight: FontWeight.w600, fontSize: 25),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: bBackgroundColor,
         elevation: 0.0,
       ),
       body: Container(

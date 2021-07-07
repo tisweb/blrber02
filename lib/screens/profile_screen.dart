@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 // Import services
+import '../constants.dart';
 import '../services/foundation.dart';
 
 //Imports for Widgets
@@ -29,9 +30,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           )
         : Scaffold(
             appBar: AppBar(
-              title: Text('Profile'),
+              centerTitle: true,
+              title: Text(
+                'Profile',
+                style: TextStyle(
+                    color: bDisabledColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 25),
+              ),
               elevation: 0.0,
+              backgroundColor: bBackgroundColor,
             ),
+            backgroundColor: bBackgroundColor,
             body: Container(
               child: StreamBuilder<Object>(
                 // stream: FirebaseAuth.instance.authStateChanges(),
@@ -49,7 +59,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Provider.of<List<AdminUser>>(context);
 
                     print('adminUsers.length - ${adminUsers.length}');
-
+                    // if (user.emailVerified) {
                     if (adminUsers.length > 0 &&
                         adminUsers
                             .any((e) => e.userId.trim() == user.uid.trim())) {
@@ -59,6 +69,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       print('calling display profile');
                       return DisplayProfile();
                     }
+                    // } else {
+                    //   return AuthScreen();
+                    // }
                   } else {
                     print('calling Auth Screen');
                     return AuthScreen();
@@ -66,7 +79,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
               ),
             ),
-
             // _displayProfile,
           );
   }

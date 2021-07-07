@@ -1,4 +1,4 @@
-import 'package:blrber/screens/user_chat_page.dart';
+import 'package:blrber/screens/user_chat_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -54,7 +54,7 @@ class _ToChatState extends State<ToChat> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      child: UserChatPage(
+      child: UserChatScreen(
         userNameFrom: userNameFrom,
         userNameTo: userNameTo,
         userIdFrom: widget.userIdFrom,

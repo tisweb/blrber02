@@ -4,12 +4,15 @@ import 'package:blrber/models/message.dart';
 import 'package:blrber/provider/motor_form_sqldb_provider.dart';
 import 'package:blrber/provider/prod_images_sqldb_provider.dart';
 import 'package:blrber/provider/user_details_provider.dart';
+import 'package:blrber/screens/dynamic_link_screen.dart';
 import 'package:blrber/screens/search_results.dart';
 import 'package:blrber/screens/settings_screen.dart';
+import 'package:blrber/screens/user_chat_screen.dart';
 import 'package:blrber/screens/view_full_specs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 // Imports for Services
@@ -19,8 +22,6 @@ import './services/foundation.dart';
 // Imports for Screens
 import './screens/tabs_screen.dart';
 import './screens/product_detail_screen.dart';
-import './screens/get_location.dart';
-import './screens/user_chat_page.dart';
 
 // Imports for Models
 import './models/category.dart';
@@ -30,10 +31,15 @@ import './models/user_detail.dart';
 // Imports for Providers
 import './provider/get_current_location.dart';
 import './provider/google_sign_in.dart';
+import 'constants.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   runApp(MyApp());
 }
 
@@ -42,12 +48,12 @@ class MyApp extends StatelessWidget {
   static const String _initialRoute = '/';
   final _routes = {
     '/': (ctx) => TabsScreen(),
-    UserChatPage.routeName: (ctx) => UserChatPage(),
+    UserChatScreen.routeName: (ctx) => UserChatScreen(),
     ProductDetailScreen.routeName: (ctx) => ProductDetailScreen(),
-    GetLocation.routeName: (ctx) => GetLocation(),
     SearchResults.routeName: (ctx) => SearchResults(),
     ViewFullSpecs.routeName: (ctx) => ViewFullSpecs(),
     SettingsScreen.routeName: (ctx) => SettingsScreen(),
+    '/helloworld': (BuildContext context) => DynamicLinkScreen(),
   };
   static const bool _debugShowCheckedModeBanner = false;
   @override
@@ -86,16 +92,16 @@ class MyApp extends StatelessWidget {
           value: Database().deliveryinfos,
           initialData: [],
         ),
+        StreamProvider<List<TypeOfAd>>.value(
+          value: Database().typeOfAds,
+          initialData: [],
+        ),
         StreamProvider<List<ForSaleBy>>.value(
           value: Database().forSaleBys,
           initialData: [],
         ),
         StreamProvider<List<FuelType>>.value(
           value: Database().fuelTypes,
-          initialData: [],
-        ),
-        StreamProvider<List<Year>>.value(
-          value: Database().years,
           initialData: [],
         ),
         StreamProvider<List<Make>>.value(
@@ -106,8 +112,24 @@ class MyApp extends StatelessWidget {
           value: Database().models,
           initialData: [],
         ),
-        StreamProvider<List<TempProd>>.value(
-          value: Database().tempProd,
+        StreamProvider<List<VehicleType>>.value(
+          value: Database().vehicleTypes,
+          initialData: [],
+        ),
+        StreamProvider<List<SubModel>>.value(
+          value: Database().subModels,
+          initialData: [],
+        ),
+        StreamProvider<List<DriveType>>.value(
+          value: Database().driveTypes,
+          initialData: [],
+        ),
+        StreamProvider<List<BodyType>>.value(
+          value: Database().bodyTypes,
+          initialData: [],
+        ),
+        StreamProvider<List<Transmission>>.value(
+          value: Database().transmissions,
           initialData: [],
         ),
         StreamProvider<List<FavoriteProd>>.value(
@@ -133,10 +155,6 @@ class MyApp extends StatelessWidget {
         StreamProvider<List<CompanyDetail>>.value(
           value: Database().companyDetails,
           initialData: [],
-        ),
-        StreamProvider<UserDetail>.value(
-          value: Database().userDetailSpecific,
-          initialData: UserDetail(),
         ),
         StreamProvider<List<UserType>>.value(
           value: Database().userTypes,
@@ -164,17 +182,18 @@ class MyApp extends StatelessWidget {
               title: _title,
               initialRoute: _initialRoute,
               routes: _routes,
-              color: Colors.white,
+              color: bBackgroundColor,
               debugShowCheckedModeBanner: _debugShowCheckedModeBanner,
             )
           : MaterialApp(
               title: _title,
               theme: ThemeData(
-                primaryColor: Colors.orange[800],
-                backgroundColor: Colors.white,
-                disabledColor: Colors.grey[700],
-                scaffoldBackgroundColor: Colors.grey[300],
-              ),
+                  primaryColor: bPrimaryColor,
+                  backgroundColor: bBackgroundColor,
+                  disabledColor: bDisabledColor,
+                  scaffoldBackgroundColor: bScaffoldBackgroundColor,
+                  visualDensity: VisualDensity.adaptivePlatformDensity,
+                  fontFamily: bFontFamily),
               initialRoute: _initialRoute,
               routes: _routes,
               debugShowCheckedModeBanner: _debugShowCheckedModeBanner,

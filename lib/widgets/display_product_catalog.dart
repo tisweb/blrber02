@@ -1,18 +1,30 @@
-import 'package:blrber/models/product.dart';
-import 'package:blrber/provider/get_current_location.dart';
-import 'package:blrber/provider/motor_form_sqldb_provider.dart';
-import 'package:blrber/provider/prod_images_sqldb_provider.dart';
-import 'package:blrber/screens/edit_post.dart';
-import 'package:blrber/screens/generate_post.dart';
-import 'package:blrber/screens/product_detail_screen.dart';
-import 'package:blrber/services/foundation.dart';
+//Imports for pubspec Packages
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:custom_radio_grouped_button/custom_radio_grouped_button.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
+
+//Imports for Models
+import '../models/product.dart';
+
+//Imports for Providers
+import '../provider/get_current_location.dart';
+import '../provider/motor_form_sqldb_provider.dart';
+import '../provider/prod_images_sqldb_provider.dart';
+
+//Imports for Screens
+import '../screens/edit_post.dart';
+import '../screens/product_detail_screen.dart';
+
+//Imports for Services
+import '../services/foundation.dart';
+
+//Imports for Constants
+import '../constants.dart';
 
 class DisplayProductCatalog extends StatefulWidget {
   final String adminUserPermission;
@@ -49,6 +61,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
 
   String _currencySymbol = "";
   String _currencyName = "";
+  String _adminViewFlag = "";
   List<Product> productsQuery = [];
 
   //
@@ -81,7 +94,8 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
   }
 
   // functions for product catalog
-  Future<void> _deleteProduct(String prodId, String category) async {
+  Future<void> _deleteProduct(
+      String prodId, String category, String subCategory) async {
     WriteBatch batch = FirebaseFirestore.instance.batch();
 
     return await FirebaseFirestore.instance
@@ -89,9 +103,8 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
         .doc(prodId)
         .delete()
         .then((value) async {
-      if (category.toLowerCase().trim() == 'car'.trim() ||
-          category.toLowerCase().trim() == 'truck'.trim() ||
-          category.toLowerCase().trim() == 'motorbike'.trim()) {
+      if (category.toLowerCase().trim() == 'vehicle'.trim() &&
+          !subCategory.contains('Accessories')) {
         await FirebaseFirestore.instance
             .collection('CtmSpecialInfo')
             .where('prodDocId', isEqualTo: prodId)
@@ -105,6 +118,20 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
         }).catchError((error) =>
                 print("Failed to get product in CtmSpecialInfo: $error"));
       }
+
+      batch = FirebaseFirestore.instance.batch();
+
+      await FirebaseFirestore.instance
+          .collection('favoriteProd')
+          .where('prodDocId', isEqualTo: prodId)
+          .get()
+          .then((querySnapshot) {
+        querySnapshot.docs.forEach((document) {
+          batch.delete(document.reference);
+        });
+        return batch.commit().catchError((error) =>
+            print("Failed to delete products in favoriteProd: $error"));
+      });
 
       batch = FirebaseFirestore.instance.batch();
 
@@ -123,19 +150,11 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
             print("Failed to delete products in ProdImages: $error"));
       });
 
-      batch = FirebaseFirestore.instance.batch();
+      final refDel = FirebaseStorage.instance.ref().child(
+          // 'product_images/${user.uid}/${motorFormSqlDb.catName}/${motorFormSqlDb.make}')
+          'product_images/$prodId');
 
-      await FirebaseFirestore.instance
-          .collection('favoriteProd')
-          .where('prodDocId', isEqualTo: prodId)
-          .get()
-          .then((querySnapshot) {
-        querySnapshot.docs.forEach((document) {
-          batch.delete(document.reference);
-        });
-        return batch.commit().catchError((error) =>
-            print("Failed to delete products in favoriteProd: $error"));
-      });
+      await refDel.delete().then((value) => 'Product Deleted in storage');
     }).catchError((error) => print("Failed to delete product: $error"));
   }
 
@@ -181,11 +200,8 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
         .get()
         .then((DocumentSnapshot productDoc) async {
       if (productDoc.exists) {
-        if (productDoc.data()["catName"].toLowerCase().trim() == 'car'.trim() ||
-            productDoc.data()["catName"].toLowerCase().trim() ==
-                'truck'.trim() ||
-            productDoc.data()["catName"].toLowerCase().trim() ==
-                'motorbike'.trim()) {
+        if (productDoc.data()["catName"].trim() == 'Vehicle' &&
+            !productDoc.data()["subCatType"].contains('Accessories')) {
           await FirebaseFirestore.instance
               .collection('CtmSpecialInfo')
               .where('prodDocId', isEqualTo: prodId)
@@ -193,7 +209,8 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
               .then((querySnapshot) {
             querySnapshot.docs.forEach((ctmSpecialInfoDoc) async {
               motorFormSqlDb.catName = productDoc.data()["catName"];
-              motorFormSqlDb.subCatDocId = productDoc.data()["subCatDocId"];
+              motorFormSqlDb.prodName = productDoc.data()["prodName"];
+              motorFormSqlDb.subCatType = productDoc.data()["subCatType"];
               motorFormSqlDb.prodDes = productDoc.data()["prodDes"];
               motorFormSqlDb.sellerNotes = productDoc.data()["sellerNotes"];
               motorFormSqlDb.prodCondition = productDoc.data()["prodCondition"];
@@ -201,6 +218,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
               motorFormSqlDb.imageUrlFeatured =
                   productDoc.data()["imageUrlFeatured"];
               motorFormSqlDb.deliveryInfo = productDoc.data()["deliveryInfo"];
+              motorFormSqlDb.typeOfAd = productDoc.data()["typeOfAd"];
               motorFormSqlDb.year = productDoc.data()["year"];
               motorFormSqlDb.make = productDoc.data()["make"];
               motorFormSqlDb.model = productDoc.data()["model"];
@@ -222,7 +240,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
               motorFormSqlDb.bodyType = ctmSpecialInfoDoc.data()["bodyType"];
               motorFormSqlDb.exteriorColor =
                   ctmSpecialInfoDoc.data()["exteriorColor"];
-              motorFormSqlDb.forSaleBy = ctmSpecialInfoDoc.data()["forSaleBy"];
+              motorFormSqlDb.forSaleBy = productDoc.data()["forSaleBy"];
               motorFormSqlDb.warranty = ctmSpecialInfoDoc.data()["warranty"];
               motorFormSqlDb.trim = ctmSpecialInfoDoc.data()["trim"];
               motorFormSqlDb.transmission =
@@ -238,7 +256,8 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                   print("Failed to get product in CtmSpecialInfo: $error"));
         } else {
           motorFormSqlDb.catName = productDoc.data()["catName"];
-          motorFormSqlDb.subCatDocId = productDoc.data()["subCatDocId"];
+          motorFormSqlDb.prodName = productDoc.data()["prodName"];
+          motorFormSqlDb.subCatType = productDoc.data()["subCatType"];
           motorFormSqlDb.prodDes = productDoc.data()["prodDes"];
           motorFormSqlDb.sellerNotes = productDoc.data()["sellerNotes"];
           motorFormSqlDb.prodCondition = productDoc.data()["prodCondition"];
@@ -246,6 +265,8 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
           motorFormSqlDb.imageUrlFeatured =
               productDoc.data()["imageUrlFeatured"];
           motorFormSqlDb.deliveryInfo = productDoc.data()["deliveryInfo"];
+          motorFormSqlDb.typeOfAd = productDoc.data()["typeOfAd"];
+          motorFormSqlDb.forSaleBy = productDoc.data()["forSaleBy"];
           motorFormSqlDb.year = productDoc.data()["year"];
           motorFormSqlDb.make = productDoc.data()["make"];
           motorFormSqlDb.model = productDoc.data()["model"];
@@ -285,67 +306,72 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
     return _readyToEdit;
   }
 
-  void _showDeleteDialog(String prodDocId, String prodName, String catName) {
+  void _showDeleteDialog(
+      String prodDocId, String prodName, String catName, String subCatType) {
     showDialog(
+      barrierDismissible: false,
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Delete Product?"),
-          content: Container(
-            height: 100,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  Text(prodName),
-                  Text('Do you want to Delete this Item?'),
-                ],
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: const Text("Delete Product?"),
+              content: Container(
+                height: 100,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Text(prodName),
+                      _prodDeleted == ''
+                          ? const Text(
+                              'Do you want to Delete this Item?',
+                              style: TextStyle(color: Colors.blue),
+                            )
+                          : const CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  bScaffoldBackgroundColor),
+                              backgroundColor: bPrimaryColor,
+                            ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text('No'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: Text('Yes'),
-              onPressed: () {
-                setState(() {
-                  _prodDeleted = 'false';
-                });
+              actions: <Widget>[
+                if (_prodDeleted == '')
+                  TextButton(
+                    child: Text('No'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                if (_prodDeleted == '')
+                  TextButton(
+                    child: Text('Yes'),
+                    onPressed: () {
+                      setState(() {
+                        _prodDeleted = 'false';
+                      });
 
-                _deleteProduct(prodDocId, catName).then((value) {
-                  print('product deleted successfully1111! - $_prodDeleted');
-                  Navigator.of(context).pop();
-                  if (_prodDeleted == 'true') {
-                    print('product deleted successfully!');
-                    setState(() {
-                      _prodDeleted = '';
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Product Deleted!'),
-                      ),
-                    );
-                  }
-                });
-                if (_prodDeleted == 'false') {
-                  print('product deleted successfully!');
-                  setState(() {
-                    _prodDeleted = '';
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Deleting Product...'),
-                    ),
-                  );
-                }
-              },
-            ),
-          ],
+                      _deleteProduct(prodDocId, catName, subCatType)
+                          .then((value) {
+                        Navigator.of(context).pop();
+                        if (_prodDeleted == 'true') {
+                          // setState(() {
+                          _prodDeleted = '';
+                          // });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Product Deleted Successfully!'),
+                            ),
+                          );
+                        }
+                      });
+                    },
+                  ),
+              ],
+            );
+          },
         );
       },
     );
@@ -356,21 +382,21 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Unable to Edit!!"),
+          title: const Text("Unable to Edit!!"),
           content: Container(
             height: 100,
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  Text('Not able to edit this Item?'),
+                  const Text('Not able to edit this Item?'),
                 ],
               ),
             ),
           ),
           actions: <Widget>[
             TextButton(
-              child: Text('Ok'),
+              child: const Text('Ok'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -392,7 +418,6 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
   }
 
   void _getProducts() {
-    print('check loc1 - product catalog');
     final user = FirebaseAuth.instance.currentUser;
 
     productsAll = Provider.of<List<Product>>(context);
@@ -563,6 +588,8 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
   Widget _buildStack(BuildContext context, BoxConstraints constraints) {
     final Animation<RelativeRect> animation = _getPanelAnimation(constraints);
     final ThemeData theme = Theme.of(context);
+    const double _listTileHeight = 100;
+    const double _listTileWidth = 170;
 
     return new Container(
       color: theme.primaryColor,
@@ -579,15 +606,16 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                       child: Stack(
                         children: [
                           Container(
-                            height: 100,
-                            width: 150,
+                            height: _listTileHeight,
+                            width: _listTileWidth,
                             child: Card(
                               elevation: 1,
                               child: ListTile(
                                 onTap: () {
                                   setState(() {
-                                    _getProductsForAdmin('Verified');
+                                    _adminViewFlag = "Verified";
                                   });
+                                  _getProductsForAdmin(_adminViewFlag);
 
                                   _controller.fling(
                                       velocity: _isPanelVisible ? -1.0 : 1.0);
@@ -596,29 +624,29 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                   alignment: Alignment.topRight,
                                   child: Column(
                                     children: [
-                                      Text('Verified'),
-                                      SizedBox(
+                                      const Text('Verified'),
+                                      const SizedBox(
                                         height: 10,
                                       ),
                                       Text(_totalVerifiedProducts.toString()),
                                     ],
                                   ),
                                 ),
-                                tileColor: Colors.white,
+                                tileColor: bBackgroundColor,
                               ),
                             ),
                           ),
-                          Positioned(
+                          const Positioned(
                             top: -5,
                             left: 20,
-                            child: SizedBox(
+                            child: const SizedBox(
                               height: 50,
                               width: 50,
-                              child: Card(
+                              child: const Card(
                                 color: Colors.green,
-                                child: Icon(
+                                child: const Icon(
                                   Icons.verified,
-                                  color: Colors.white,
+                                  color: bBackgroundColor,
                                 ),
                               ),
                             ),
@@ -631,15 +659,16 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                       child: Stack(
                         children: [
                           Container(
-                            height: 100,
-                            width: 150,
+                            height: _listTileHeight,
+                            width: _listTileWidth,
                             child: Card(
                               elevation: 1,
                               child: ListTile(
                                 onTap: () {
                                   setState(() {
-                                    _getProductsForAdmin('Pending');
+                                    _adminViewFlag = "Pending";
                                   });
+                                  _getProductsForAdmin(_adminViewFlag);
 
                                   _controller.fling(
                                       velocity: _isPanelVisible ? -1.0 : 1.0);
@@ -648,29 +677,29 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                   alignment: Alignment.topRight,
                                   child: Column(
                                     children: [
-                                      Text('Pending'),
-                                      SizedBox(
+                                      const Text('Pending'),
+                                      const SizedBox(
                                         height: 10,
                                       ),
                                       Text(_totalPendingProducts.toString()),
                                     ],
                                   ),
                                 ),
-                                tileColor: Colors.white,
+                                tileColor: bBackgroundColor,
                               ),
                             ),
                           ),
-                          Positioned(
+                          const Positioned(
                             top: -5,
                             left: 20,
-                            child: SizedBox(
+                            child: const SizedBox(
                               height: 50,
                               width: 50,
-                              child: Card(
-                                color: Colors.yellow,
-                                child: Icon(
-                                  Icons.verified,
-                                  color: Colors.white,
+                              child: const Card(
+                                color: const Color(0xFFF9A825),
+                                child: const Icon(
+                                  Icons.pending,
+                                  color: bBackgroundColor,
                                 ),
                               ),
                             ),
@@ -683,15 +712,16 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                       child: Stack(
                         children: [
                           Container(
-                            height: 100,
-                            width: 150,
+                            height: _listTileHeight,
+                            width: _listTileWidth,
                             child: Card(
                               elevation: 1,
                               child: ListTile(
                                 onTap: () {
                                   setState(() {
-                                    _getProductsForAdmin('Sold');
+                                    _adminViewFlag = "Sold";
                                   });
+                                  _getProductsForAdmin(_adminViewFlag);
 
                                   _controller.fling(
                                       velocity: _isPanelVisible ? -1.0 : 1.0);
@@ -700,29 +730,29 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                   alignment: Alignment.topRight,
                                   child: Column(
                                     children: [
-                                      Text('Sold'),
-                                      SizedBox(
+                                      const Text('Sold'),
+                                      const SizedBox(
                                         height: 10,
                                       ),
                                       Text(_totalSoldProducts.toString()),
                                     ],
                                   ),
                                 ),
-                                tileColor: Colors.white,
+                                tileColor: bBackgroundColor,
                               ),
                             ),
                           ),
-                          Positioned(
+                          const Positioned(
                             top: -5,
                             left: 20,
-                            child: SizedBox(
+                            child: const SizedBox(
                               height: 50,
                               width: 50,
-                              child: Card(
+                              child: const Card(
                                 color: Colors.red,
-                                child: Icon(
-                                  FontAwesomeIcons.accessibleIcon,
-                                  color: Colors.white,
+                                child: const Icon(
+                                  Icons.thumb_up,
+                                  color: bBackgroundColor,
                                 ),
                               ),
                             ),
@@ -735,15 +765,16 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                       child: Stack(
                         children: [
                           Container(
-                            height: 100,
-                            width: 150,
+                            height: _listTileHeight,
+                            width: _listTileWidth,
                             child: Card(
                               elevation: 1,
                               child: ListTile(
                                 onTap: () {
                                   setState(() {
-                                    _getProductsForAdmin('Available');
+                                    _adminViewFlag = "Available";
                                   });
+                                  _getProductsForAdmin(_adminViewFlag);
 
                                   _controller.fling(
                                       velocity: _isPanelVisible ? -1.0 : 1.0);
@@ -752,29 +783,29 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                   alignment: Alignment.topRight,
                                   child: Column(
                                     children: [
-                                      Text('Available'),
-                                      SizedBox(
+                                      const Text('Available'),
+                                      const SizedBox(
                                         height: 10,
                                       ),
                                       Text(_totalAvailableProducts.toString()),
                                     ],
                                   ),
                                 ),
-                                tileColor: Colors.white,
+                                tileColor: bBackgroundColor,
                               ),
                             ),
                           ),
-                          Positioned(
+                          const Positioned(
                             top: -5,
                             left: 20,
-                            child: SizedBox(
+                            child: const SizedBox(
                               height: 50,
                               width: 50,
-                              child: Card(
+                              child: const Card(
                                 color: Colors.green,
-                                child: Icon(
-                                  FontAwesomeIcons.accessibleIcon,
-                                  color: Colors.white,
+                                child: const Icon(
+                                  FontAwesomeIcons.squareFull,
+                                  color: bBackgroundColor,
                                 ),
                               ),
                             ),
@@ -787,15 +818,16 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                       child: Stack(
                         children: [
                           Container(
-                            height: 100,
-                            width: 150,
+                            height: _listTileHeight,
+                            width: _listTileWidth,
                             child: Card(
                               elevation: 1,
                               child: ListTile(
                                 onTap: () {
                                   setState(() {
-                                    _getProductsForAdmin('Unavailable');
+                                    _adminViewFlag = "Unavailable";
                                   });
+                                  _getProductsForAdmin(_adminViewFlag);
 
                                   _controller.fling(
                                       velocity: _isPanelVisible ? -1.0 : 1.0);
@@ -804,8 +836,8 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                   alignment: Alignment.topRight,
                                   child: Column(
                                     children: [
-                                      Text('Unavailable'),
-                                      SizedBox(
+                                      const Text('Unavailable'),
+                                      const SizedBox(
                                         height: 10,
                                       ),
                                       Text(
@@ -813,21 +845,21 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                     ],
                                   ),
                                 ),
-                                tileColor: Colors.white,
+                                tileColor: bBackgroundColor,
                               ),
                             ),
                           ),
-                          Positioned(
+                          const Positioned(
                             top: -5,
                             left: 20,
-                            child: SizedBox(
+                            child: const SizedBox(
                               height: 50,
                               width: 50,
-                              child: Card(
-                                color: Colors.orange,
-                                child: Icon(
-                                  FontAwesomeIcons.accessibleIcon,
-                                  color: Colors.white,
+                              child: const Card(
+                                color: Colors.grey,
+                                child: const Icon(
+                                  Icons.hourglass_empty,
+                                  color: bBackgroundColor,
                                 ),
                               ),
                             ),
@@ -840,15 +872,16 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                       child: Stack(
                         children: [
                           Container(
-                            height: 100,
-                            width: 150,
+                            height: _listTileHeight,
+                            width: _listTileWidth,
                             child: Card(
                               elevation: 1,
                               child: ListTile(
                                 onTap: () {
                                   setState(() {
-                                    _getProductsForAdmin('All');
+                                    _adminViewFlag = "All";
                                   });
+                                  _getProductsForAdmin(_adminViewFlag);
 
                                   _controller.fling(
                                       velocity: _isPanelVisible ? -1.0 : 1.0);
@@ -857,29 +890,29 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                   alignment: Alignment.topRight,
                                   child: Column(
                                     children: [
-                                      Text('All'),
-                                      SizedBox(
+                                      const Text('All'),
+                                      const SizedBox(
                                         height: 10,
                                       ),
                                       Text(_totalProducts.toString()),
                                     ],
                                   ),
                                 ),
-                                tileColor: Colors.white,
+                                tileColor: bBackgroundColor,
                               ),
                             ),
                           ),
-                          Positioned(
+                          const Positioned(
                             top: -5,
                             left: 20,
-                            child: SizedBox(
+                            child: const SizedBox(
                               height: 50,
                               width: 50,
-                              child: Card(
+                              child: const Card(
                                 color: Colors.blue,
-                                child: Icon(
-                                  FontAwesomeIcons.accessibleIcon,
-                                  color: Colors.white,
+                                child: const Icon(
+                                  FontAwesomeIcons.borderAll,
+                                  color: bBackgroundColor,
                                 ),
                               ),
                             ),
@@ -903,7 +936,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                 new Container(
                   height: _PANEL_HEADER_HEIGHT,
                   child: Container(
-                    color: Colors.white,
+                    color: bBackgroundColor,
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: !isGrid
@@ -935,7 +968,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                   itemCount: products.length,
                                   itemBuilder: (BuildContext context, int j) {
                                     return Container(
-                                      color: Colors.white,
+                                      color: bBackgroundColor,
                                       padding: EdgeInsets.all(5),
                                       child: ListTile(
                                         onTap: () {
@@ -958,7 +991,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                         fit: BoxFit.fill,
                                                       )
                                                     : Container(
-                                                        child: Center(
+                                                        child: const Center(
                                                           child: Text(
                                                               'Image Loading...'),
                                                         ),
@@ -994,9 +1027,8 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                         text: TextSpan(
                                                           text: _currencySymbol,
                                                           style: TextStyle(
-                                                            color: Theme.of(
-                                                                    context)
-                                                                .disabledColor,
+                                                            color:
+                                                                bDisabledColor,
                                                             fontSize: 15,
                                                             fontWeight:
                                                                 FontWeight.bold,
@@ -1012,16 +1044,15 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                           ],
                                                         ),
                                                       ),
-                                                      SizedBox(
+                                                      const SizedBox(
                                                         width: 10,
                                                       ),
                                                       RichText(
                                                         text: TextSpan(
                                                           text: 'Status : ',
                                                           style: TextStyle(
-                                                            color: Theme.of(
-                                                                    context)
-                                                                .disabledColor,
+                                                            color:
+                                                                bDisabledColor,
                                                             fontSize: 15,
                                                             fontWeight:
                                                                 FontWeight.bold,
@@ -1047,7 +1078,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                           ],
                                                         ),
                                                       ),
-                                                      SizedBox(
+                                                      const SizedBox(
                                                         width: 10,
                                                       ),
                                                       Text(products[j]
@@ -1057,15 +1088,14 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                   RichText(
                                                     text: TextSpan(
                                                       text: 'Created at :',
-                                                      style: TextStyle(
-                                                        color: Theme.of(context)
-                                                            .disabledColor,
+                                                      style: const TextStyle(
+                                                        color: bDisabledColor,
                                                         fontSize: 15,
                                                         fontWeight:
                                                             FontWeight.bold,
                                                       ),
                                                       children: [
-                                                        TextSpan(
+                                                        const TextSpan(
                                                           text: ' ',
                                                         ),
                                                         TextSpan(
@@ -1075,7 +1105,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                               .month
                                                               .toString(),
                                                         ),
-                                                        TextSpan(
+                                                        const TextSpan(
                                                           text: '-',
                                                         ),
                                                         TextSpan(
@@ -1085,7 +1115,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                               .day
                                                               .toString(),
                                                         ),
-                                                        TextSpan(
+                                                        const TextSpan(
                                                           text: '-',
                                                         ),
                                                         TextSpan(
@@ -1226,8 +1256,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                           backgroundColor:
                                                               MaterialStateProperty
                                                                   .all<Color>(
-                                                            Theme.of(context)
-                                                                .primaryColor,
+                                                            bPrimaryColor,
                                                           ),
                                                         ),
                                                         onPressed: () {
@@ -1236,26 +1265,15 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                                   .prodDocId)
                                                               .then((edit) {
                                                             if (edit == true) {
-                                                              // Navigator
-                                                              //     .pushReplacement(
-                                                              //   context,
-                                                              //   MaterialPageRoute(
-                                                              //       builder:
-                                                              //           (_) {
-                                                              //         return EditPost(
-                                                              //             prodId:
-                                                              //                 products[j].prodDocId);
-                                                              //       },
-                                                              //       fullscreenDialog:
-                                                              //           true),
-                                                              // );
                                                               Navigator
                                                                   .pushReplacement(
                                                                 context,
                                                                 MaterialPageRoute(
                                                                     builder:
                                                                         (_) {
-                                                                      return GeneratePost();
+                                                                      return EditPost(
+                                                                          prodId:
+                                                                              products[j].prodDocId);
                                                                     },
                                                                     fullscreenDialog:
                                                                         true),
@@ -1265,10 +1283,12 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                             }
                                                           });
                                                         },
-                                                        icon: Icon(Icons.edit),
-                                                        label: Text('Edit'),
+                                                        icon: const Icon(
+                                                            Icons.edit),
+                                                        label:
+                                                            const Text('Edit'),
                                                       ),
-                                                      SizedBox(
+                                                      const SizedBox(
                                                         width: 25,
                                                       ),
                                                       if (widget.adminUserPermission ==
@@ -1285,16 +1305,20 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                           ),
                                                           onPressed: () {
                                                             _showDeleteDialog(
-                                                                products[j]
-                                                                    .prodDocId,
-                                                                products[j]
-                                                                    .prodName,
-                                                                products[j]
-                                                                    .catName);
+                                                              products[j]
+                                                                  .prodDocId,
+                                                              products[j]
+                                                                  .prodName,
+                                                              products[j]
+                                                                  .catName,
+                                                              products[j]
+                                                                  .subCatType,
+                                                            );
                                                           },
-                                                          icon: Icon(
+                                                          icon: const Icon(
                                                               Icons.delete),
-                                                          label: Text('Delete'),
+                                                          label: const Text(
+                                                              'Delete'),
                                                         )
                                                     ],
                                                   ),
@@ -1321,8 +1345,8 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                     return Column(
                                       children: [
                                         Container(
-                                          color: Colors.white,
-                                          padding: EdgeInsets.all(5),
+                                          color: bBackgroundColor,
+                                          padding: const EdgeInsets.all(5),
                                           child: ListTile(
                                             onTap: () {
                                               Navigator.of(context).pushNamed(
@@ -1358,8 +1382,9 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                                     BoxFit.fill,
                                                               )
                                                             : Container(
-                                                                child: Center(
-                                                                  child: Text(
+                                                                child:
+                                                                    const Center(
+                                                                  child: const Text(
                                                                       'Image Loading...'),
                                                                 ),
                                                               ),
@@ -1387,10 +1412,9 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                                     '...'
                                                                 : products[j]
                                                                     .prodName,
-                                                            style: TextStyle(
-                                                                color: Theme.of(
-                                                                        context)
-                                                                    .disabledColor,
+                                                            style: const TextStyle(
+                                                                color:
+                                                                    bDisabledColor,
                                                                 fontSize: 17,
                                                                 fontWeight:
                                                                     FontWeight
@@ -1414,7 +1438,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                                             .bold,
                                                                   ),
                                                                   children: [
-                                                                    TextSpan(
+                                                                    const TextSpan(
                                                                       text: ' ',
                                                                     ),
                                                                     TextSpan(
@@ -1434,10 +1458,9 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                                   text:
                                                                       'Status : ',
                                                                   style:
-                                                                      TextStyle(
-                                                                    color: Theme.of(
-                                                                            context)
-                                                                        .disabledColor,
+                                                                      const TextStyle(
+                                                                    color:
+                                                                        bDisabledColor,
                                                                     fontSize:
                                                                         15,
                                                                     fontWeight:
@@ -1464,7 +1487,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                                   ],
                                                                 ),
                                                               ),
-                                                              SizedBox(
+                                                              const SizedBox(
                                                                 width: 10,
                                                               ),
                                                               Text(products[j]
@@ -1475,17 +1498,17 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                             text: TextSpan(
                                                               text:
                                                                   'Created at :',
-                                                              style: TextStyle(
-                                                                color: Theme.of(
-                                                                        context)
-                                                                    .disabledColor,
+                                                              style:
+                                                                  const TextStyle(
+                                                                color:
+                                                                    bDisabledColor,
                                                                 fontSize: 15,
                                                                 fontWeight:
                                                                     FontWeight
                                                                         .bold,
                                                               ),
                                                               children: [
-                                                                TextSpan(
+                                                                const TextSpan(
                                                                   text: ' ',
                                                                 ),
                                                                 TextSpan(
@@ -1496,7 +1519,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                                       .month
                                                                       .toString(),
                                                                 ),
-                                                                TextSpan(
+                                                                const TextSpan(
                                                                   text: '-',
                                                                 ),
                                                                 TextSpan(
@@ -1507,7 +1530,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                                       .day
                                                                       .toString(),
                                                                 ),
-                                                                TextSpan(
+                                                                const TextSpan(
                                                                   text: '-',
                                                                 ),
                                                                 TextSpan(
@@ -1534,9 +1557,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                                       MaterialStateProperty
                                                                           .all<
                                                                               Color>(
-                                                                    Theme.of(
-                                                                            context)
-                                                                        .primaryColor,
+                                                                    bPrimaryColor,
                                                                   ),
                                                                 ),
                                                                 onPressed: () {
@@ -1553,33 +1574,22 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                                         MaterialPageRoute(
                                                                             builder:
                                                                                 (_) {
-                                                                              return GeneratePost();
+                                                                              return EditPost(prodId: products[j].prodDocId);
                                                                             },
                                                                             fullscreenDialog:
                                                                                 true),
                                                                       );
-                                                                      // Navigator
-                                                                      //     .pushReplacement(
-                                                                      //   context,
-                                                                      //   MaterialPageRoute(
-                                                                      //       builder:
-                                                                      //           (_) {
-                                                                      //         return EditPost(prodId: products[j].prodDocId);
-                                                                      //       },
-                                                                      //       fullscreenDialog:
-                                                                      //           true),
-                                                                      // );
                                                                     } else {
                                                                       _showEditDialog();
                                                                     }
                                                                   });
                                                                 },
-                                                                icon: Icon(
+                                                                icon: const Icon(
                                                                     Icons.edit),
                                                                 label: Text(
                                                                     'Edit'),
                                                               ),
-                                                              SizedBox(
+                                                              const SizedBox(
                                                                 width: 25,
                                                               ),
                                                               if (widget.adminUserPermission ==
@@ -1605,10 +1615,13 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                                         products[j]
                                                                             .prodName,
                                                                         products[j]
-                                                                            .catName);
+                                                                            .catName,
+                                                                        products[j]
+                                                                            .subCatType);
                                                                   },
-                                                                  icon: Icon(Icons
-                                                                      .delete),
+                                                                  icon: const Icon(
+                                                                      Icons
+                                                                          .delete),
                                                                   label: Text(
                                                                       'Delete'),
                                                                 )
@@ -1628,7 +1641,8 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                         CrossAxisAlignment
                                                             .start,
                                                     children: [
-                                                      Text('Status:'),
+                                                      Text(
+                                                          'Status: ${products[j].status}'),
                                                       Container(
                                                         width: MediaQuery.of(
                                                                     context)
@@ -1683,7 +1697,8 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.start,
                                                   children: [
-                                                    Text('Listing Status:'),
+                                                    const Text(
+                                                        'Listing Status:'),
                                                     Container(
                                                       width:
                                                           MediaQuery.of(context)
@@ -1737,7 +1752,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                             ),
                                           ),
                                         ),
-                                        SizedBox(
+                                        const SizedBox(
                                           height: 2,
                                         )
                                       ],
@@ -1746,7 +1761,7 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
                                 ),
                         ),
                       )
-                    : Center(
+                    : const Center(
                         child: Text('Oops!! Products not found... '),
                       ),
               ]),
@@ -1759,16 +1774,16 @@ class _DisplayProductCatalogState extends State<DisplayProductCatalog>
 
   @override
   Widget build(BuildContext context) {
-    return new Scaffold(
-      appBar: new AppBar(
+    return Scaffold(
+      appBar: AppBar(
         elevation: 0.0,
-        title: new Text('Product Dashboard'),
+        title: const Text('Product Dashboard'),
         centerTitle: true,
         leading: Row(
           children: [
             Expanded(
               child: IconButton(
-                  icon: Icon(Icons.arrow_back_ios),
+                  icon: const Icon(Icons.arrow_back_ios),
                   onPressed: () {
                     Navigator.of(context).pop();
                   }),

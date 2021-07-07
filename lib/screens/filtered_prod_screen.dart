@@ -8,6 +8,7 @@ class FilteredProdScreen extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
+    print('filtered - ${queriedProdIdList.length}');
     return Scaffold(
       appBar: AppBar(
         title: Text('Results'),
