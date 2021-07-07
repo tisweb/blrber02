@@ -1,26 +1,43 @@
+//Imports for pubspec Packages
 import 'dart:io';
 
-import 'package:blrber/models/category.dart';
-import 'package:blrber/models/product.dart';
-import 'package:blrber/provider/get_current_location.dart';
-import 'package:blrber/provider/motor_form_sqldb_provider.dart';
-import 'package:blrber/provider/prod_images_sqldb_provider.dart';
-import 'package:blrber/screens/tabs_screen.dart';
-import 'package:blrber/services/api_keys.dart';
-import 'package:blrber/widgets/display_product_catalog.dart';
-import 'package:blrber/widgets/search_place_auto_complete_widget_custom.dart';
-import 'package:blrber/widgets/vinc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:custom_radio_grouped_button/custom_radio_grouped_button.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_native_image/flutter_native_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:search_map_place/search_map_place.dart' as smp;
+import 'package:searchable_dropdown/searchable_dropdown.dart';
 import 'package:tflite/tflite.dart';
-import 'package:flutter/animation.dart';
+
+//Imports for Constants
+import '../constants.dart';
+
+//Imports for Services
 import '../services/foundation.dart';
+
+//Imports for Models
+import '../models/category.dart';
+import 'package:blrber/models/product.dart';
+
+//Imports for Providers
+import '../provider/get_current_location.dart';
+import '../provider/motor_form_sqldb_provider.dart';
+import '../provider/prod_images_sqldb_provider.dart';
+
+//Imports for Screen
+import '../screens/post_added_result_screen.dart';
+
+//Imports for services
+import '../services/api_keys.dart';
+
+//Imports for Widgets
+import '../widgets/search_place_auto_complete_widget_custom.dart';
+import '../widgets/vinc.dart';
 
 class PostInputForm extends StatefulWidget {
   // final String editPost;
@@ -42,12 +59,9 @@ class _PostInputFormState extends State<PostInputForm>
     GlobalKey<FormState>()
   ];
 
-  // AnimationController _controller;
-  // Animation _animation;
-
-  FocusNode _focusNode = FocusNode();
   int _currentStep = 0;
   File pickedImage;
+  File pickedImageCompressed;
   String imageLabel = "";
   String imageType = "";
   bool _featuredImage = false;
@@ -60,19 +74,26 @@ class _PostInputFormState extends State<PostInputForm>
   double _longitude = 0.0;
   String _imageUrl = "";
   String _prodUpdated = '';
-  var _prodName = '';
+  bool _specialVehicle = false;
+  bool _searchableValidate = true;
   var _userDetailDocId = '';
   var _prodDocId = '';
   var user;
-  // var _prodConditions = [];
+
   List<DropdownMenuItem<String>> _prodConditions,
       _deliveryInfo,
+      _typeOfAd,
       _forSaleBy,
+      _vehicleType,
+      _subModel,
+      _driveType,
+      _bodyType,
+      _transmission,
       _fuelType = [];
   List<DropdownMenuItem<String>> _catNames, _subCatTypes = [];
-  List<DropdownMenuItem<String>> _years = [];
   List<DropdownMenuItem<String>> _makes = [];
   List<DropdownMenuItem<String>> _models = [];
+
   var _initialSelectedItem = 'Unspecified';
   bool cTA1981 = true;
   bool _enableVinValButton = false;
@@ -81,16 +102,16 @@ class _PostInputFormState extends State<PostInputForm>
   int _iImageCount = 0;
   String _currencySymbol = "";
   String _currencyName = "";
-  String _currencySumbolByName = "";
-  String _coordinates = "";
   String _countryCode = "";
-  bool _isUpdated = false;
+  int i = 0;
+  GetCurrentLocation getCurrentLocation = GetCurrentLocation();
 
   MotorFormSqlDb motorFormSqlDb = MotorFormSqlDb();
 
   List<ProdImagesSqlDb> prodImagesSqlDb = [];
   List<ProdImagesSqlDb> prodImagesSqlDbE = [];
   List<ProdImagesSqlDb> prodImagesSqlDbI = [];
+  List<ProdImagesSqlDb> listOfRemovedImg = [];
 
   List<Category> catNames = [];
 
@@ -107,45 +128,146 @@ class _PostInputFormState extends State<PostInputForm>
     prodImageProvider =
         Provider.of<ProdImagesSqlDbProvider>(context, listen: false);
     _initialLoadMotorForm();
-
-    // _controller =
-    //     AnimationController(vsync: this, duration: Duration(milliseconds: 300));
-    // _animation = Tween(begin: 300.0, end: 50.0).animate(_controller)
-    //   ..addListener(() {
-    //     setState(() {});
-    //   });
-
-    // _focusNode.addListener(() {
-    //   if (_focusNode.hasFocus) {
-    //     _controller.forward();
-    //   } else {
-    //     _controller.reverse();
-    //   }
-    // });
   }
 
   @override
   void dispose() {
-    // _controller.dispose();
-    _focusNode.dispose();
+    controllerEC.dispose();
+    controllerIC.dispose();
 
     super.dispose();
   }
 
+  Future<void> _showAddUpdatePostDialog(String editPost) async {
+    showDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: Text(editPost == "true" ? "Update Post" : "Add Post"),
+              content: Container(
+                height: 100,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _prodUpdated == ""
+                          ? Text(
+                              editPost == "true"
+                                  ? 'Do you want to Update Post?'
+                                  : 'Do you want to Add Post?',
+                              style: TextStyle(color: Colors.blue),
+                            )
+                          : CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  Theme.of(context).scaffoldBackgroundColor),
+                              backgroundColor: bPrimaryColor,
+                            ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: <Widget>[
+                if (_prodUpdated == "")
+                  TextButton(
+                    child: Text('No'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                if (_prodUpdated == "")
+                  TextButton(
+                    child: Text('Yes'),
+                    onPressed: () async {
+                      setState(() {
+                        _prodUpdated = 'Start';
+                      });
+
+                      if (editPost == "true") {
+                        await _updateAds(widget.prodId, motorFormSqlDb.catName,
+                                motorFormSqlDb.subCatType)
+                            .then((value) async {
+                          if (value == 'Success') {
+                            await _deleteRemovedImgInStorage();
+                            await _deleteAndProcess().then((value) {
+                              _prodUpdated = "";
+                              Navigator.of(context).pop();
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) {
+                                      return PostAddedResultScreen(
+                                          editPost: motorFormSqlDb.editPost);
+                                    },
+                                    fullscreenDialog: true),
+                              );
+                            });
+                          } else {
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Oops Something went wrong! Please check!'),
+                              ),
+                            );
+                          }
+                        });
+                      } else {
+                        await _postAds().then((value) async {
+                          if (value == 'Success') {
+                            await _deleteAndProcess().then((value) {
+                              _prodUpdated = "";
+                              Navigator.of(context).pop();
+
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) {
+                                      return PostAddedResultScreen();
+                                    },
+                                    fullscreenDialog: true),
+                              );
+                            });
+                          } else {
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Oops Something went wrong! Please check!'),
+                              ),
+                            );
+                          }
+                        });
+                      }
+                    },
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    getCurrentLocation =
+        Provider.of<GetCurrentLocation>(context, listen: false);
+    _currencyName = getCurrentLocation.currencyCode;
+
+    _currencySymbol = getCurrencySymbolByName(_currencyName);
+
+    _countryCode = getCurrentLocation.countryCode;
+
+    super.didChangeDependencies();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final focusNode = FocusScope.of(context);
     _userDetailDocId = user.uid;
-    final getCurrentLocation =
-        Provider.of<GetCurrentLocation>(context, listen: false);
-
-    setState(() {
-      _currencyName = getCurrentLocation.currencyCode;
-
-      _currencySymbol = getCurrencySymbolByName(_currencyName);
-      print("Currency symbol by Name - $_currencySymbol");
-      _coordinates = getCurrentLocation.coordinates;
-      _countryCode = getCurrentLocation.countryCode;
-    });
 
     // Menu Items for Product Conditions
 
@@ -175,6 +297,24 @@ class _PostInputFormState extends State<PostInputForm>
           DropdownMenuItem(
             value: deliveryInfo.deliveryInfo,
             child: Text(deliveryInfo.deliveryInfo),
+          ),
+        );
+      }
+    }
+
+    //
+
+    // Menu Items for Type of ad
+
+    List<TypeOfAd> typeOfAds = Provider.of<List<TypeOfAd>>(context);
+    _typeOfAd = [];
+
+    if (typeOfAds != null) {
+      for (TypeOfAd typeOfAd in typeOfAds) {
+        _typeOfAd.add(
+          DropdownMenuItem(
+            value: typeOfAd.typeOfAd,
+            child: Text(typeOfAd.typeOfAd),
           ),
         );
       }
@@ -216,8 +356,104 @@ class _PostInputFormState extends State<PostInputForm>
 
     //
 
+    // Menu Items for  _vehicleType
+
+    List<VehicleType> vehicleTypes = Provider.of<List<VehicleType>>(context);
+    _vehicleType = [];
+
+    if (vehicleTypes != null) {
+      for (VehicleType vehicleType in vehicleTypes) {
+        _vehicleType.add(
+          DropdownMenuItem(
+            value: vehicleType.vehicleType,
+            child: Text(vehicleType.vehicleType),
+          ),
+        );
+      }
+    }
+
+    //
+
+    // Menu Items for  _subModel
+
+    List<SubModel> subModels = Provider.of<List<SubModel>>(context);
+    _subModel = [];
+
+    if (subModels != null) {
+      for (SubModel subModel in subModels) {
+        _subModel.add(
+          DropdownMenuItem(
+            value: subModel.subModel,
+            child: Text(subModel.subModel),
+          ),
+        );
+      }
+    }
+
+    //
+
+    // Menu Items for  _driveType
+
+    List<DriveType> driveTypes = Provider.of<List<DriveType>>(context);
+    _driveType = [];
+
+    if (driveTypes != null) {
+      for (DriveType driveType in driveTypes) {
+        _driveType.add(
+          DropdownMenuItem(
+            value: driveType.driveType,
+            child: Text(driveType.driveType),
+          ),
+        );
+      }
+    }
+
+    //
+
+    // Menu Items for  _bodyType
+
+    List<BodyType> bodyTypes = Provider.of<List<BodyType>>(context);
+    _bodyType = [];
+
+    if (bodyTypes != null) {
+      for (BodyType bodyType in bodyTypes) {
+        _bodyType.add(
+          DropdownMenuItem(
+            value: bodyType.bodyType,
+            child: Text(bodyType.bodyType),
+          ),
+        );
+      }
+    }
+
+    //
+
+    // Menu Items for  _transmission
+
+    List<Transmission> transmissions = Provider.of<List<Transmission>>(context);
+    _transmission = [];
+
+    if (transmissions != null) {
+      for (Transmission transmission in transmissions) {
+        _transmission.add(
+          DropdownMenuItem(
+            value: transmission.transmission,
+            child: Text(transmission.transmission),
+          ),
+        );
+      }
+    }
+
+    //
+
     catNames = Provider.of<List<Category>>(context);
     _catNames = [];
+    _catNames.add(
+      DropdownMenuItem(
+        value: _initialSelectedItem,
+        child: Text(_initialSelectedItem),
+      ),
+    );
     if (catNames != null) {
       for (Category catName in catNames) {
         _catNames.add(
@@ -228,22 +464,18 @@ class _PostInputFormState extends State<PostInputForm>
         );
       }
     }
-    print('category length - ${_catNames.length}');
 
 // Sub cat type
-    if (motorFormSqlDb.catName != null) {
-      print('sub type drop down check -------');
-      print('check 1 - ${motorFormSqlDb.catName}');
+    if (motorFormSqlDb.catName != null && motorFormSqlDb.catName != '') {
+      print("motorFormSqlDb.catName - ${motorFormSqlDb.catName}");
       var subCatTypes = Provider.of<List<SubCategory>>(context);
       if (subCatTypes.length > 0) {
-        print('check 2 - ${subCatTypes.length}');
         subCatTypes = subCatTypes
             .where((e) =>
                 e.catName.toLowerCase().trim() ==
                 motorFormSqlDb.catName.toLowerCase().trim())
             .toList();
-
-        print('check 2 - ${subCatTypes.length}');
+        print("subCatTypes length - ${subCatTypes.length}");
         _subCatTypes = [];
         _subCatTypes.add(
           DropdownMenuItem(
@@ -251,11 +483,18 @@ class _PostInputFormState extends State<PostInputForm>
             child: Text(_initialSelectedItem),
           ),
         );
-        if (subCatTypes != null) {
+        _subCatTypes.add(
+          DropdownMenuItem(
+            value: "Others",
+            child: Text("Others"),
+          ),
+        );
+
+        if (subCatTypes.length > 0) {
           for (SubCategory subCatType in subCatTypes) {
             _subCatTypes.add(
               DropdownMenuItem(
-                value: subCatType.subCatDocId,
+                value: subCatType.subCatType,
                 child: Text(subCatType.subCatType),
               ),
             );
@@ -264,55 +503,71 @@ class _PostInputFormState extends State<PostInputForm>
       }
     }
 
-    List<Year> years = Provider.of<List<Year>>(context);
-    _years = [];
-    if (years != null) {
-      for (Year year in years) {
-        _years.add(
-          DropdownMenuItem(
-            value: year.year,
-            child: Text(year.year),
-          ),
-        );
-      }
-    }
+    if (motorFormSqlDb.subCatType != null && motorFormSqlDb.subCatType != '') {
+      List<Make> makes = Provider.of<List<Make>>(context);
 
-    print('check1');
-    List<Make> makes = Provider.of<List<Make>>(context);
-    print('check2');
-    _makes = [];
-    if (makes != null) {
-      for (Make make in makes) {
-        _makes.add(
-          DropdownMenuItem(
-            value: make.make,
-            child: Text(make.make),
-          ),
-        );
-      }
-    }
-    print('make length - ${_makes.length}');
+      makes = makes
+          .where((e) => e.subCatType == motorFormSqlDb.subCatType)
+          .toList();
 
-    print('check3');
-    List<Model> models = Provider.of<List<Model>>(context);
-    print('check4 length - ${models.length}');
-    _models = [];
-    if (models != null) {
-      for (Model model in models) {
-        _models.add(
-          DropdownMenuItem(
-            value: model.model,
-            child: Text(model.model),
-          ),
-        );
+      _makes = [];
+      _makes.add(
+        DropdownMenuItem(
+          value: _initialSelectedItem,
+          child: Text(_initialSelectedItem),
+        ),
+      );
+      _makes.add(
+        DropdownMenuItem(
+          value: "Others",
+          child: Text("Others"),
+        ),
+      );
+      if (makes != null) {
+        for (Make make in makes) {
+          _makes.add(
+            DropdownMenuItem(
+              value: make.make,
+              child: Text(make.make),
+            ),
+          );
+        }
+      }
+
+      List<Model> models = Provider.of<List<Model>>(context);
+
+      models = models
+          .where((e) =>
+              e.subCatType == motorFormSqlDb.subCatType &&
+              e.make == motorFormSqlDb.make)
+          .toList();
+
+      _models = [];
+
+      _models.add(
+        DropdownMenuItem(
+          value: _initialSelectedItem,
+          child: Text(_initialSelectedItem),
+        ),
+      );
+      _models.add(
+        DropdownMenuItem(
+          value: "Others",
+          child: Text("Others"),
+        ),
+      );
+
+      if (models != null) {
+        for (Model model in models) {
+          _models.add(
+            DropdownMenuItem(
+              value: model.model,
+              child: Text(model.model),
+            ),
+          );
+        }
       }
     }
-    print('model length - ${_models.length}');
-    print('model length1 - ${_models.length}');
-    List<Model> getModelSuggestions(String query) => models
-        .where((e) => e.model.toLowerCase().contains(query.toLowerCase()))
-        .toList();
-    print('model length2 - ${_models.length}');
 
     List<Step> steps = [
       Step(
@@ -353,7 +608,7 @@ class _PostInputFormState extends State<PostInputForm>
                   )
                 ],
               ),
-              SizedBox(
+              const SizedBox(
                 height: 10,
               ),
               Column(
@@ -371,7 +626,7 @@ class _PostInputFormState extends State<PostInputForm>
                                 height: 0,
                               )
                             : Consumer<ProdImagesSqlDbProvider>(
-                                child: Center(
+                                child: const Center(
                                   child: Text(
                                       'Got no images yet, start adding some!'),
                                 ),
@@ -427,25 +682,34 @@ class _PostInputFormState extends State<PostInputForm>
                                                     Positioned(
                                                       top: 0,
                                                       right: 0,
-                                                      child: GestureDetector(
-                                                        onTap: () async {
-                                                          // await _deleteImageAll();
-                                                          // await _deleteMotorFormAll();
-                                                          await _deleteImage(
-                                                              prodImagesSqlDbE[
-                                                                      index]
-                                                                  .id,
-                                                              prodImagesSqlDbE[
-                                                                      index]
-                                                                  .imageType);
-                                                          // print('check drop1');
-                                                          // await _dropMotorForm();
-                                                          // print('check drop2');
-                                                        },
-                                                        child: Icon(
-                                                          Icons.close,
-                                                          size: 20,
-                                                          color: Colors.white,
+                                                      child: Container(
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: Colors.white60,
+                                                          borderRadius:
+                                                              BorderRadius.all(
+                                                            Radius.circular(50),
+                                                          ),
+                                                        ),
+                                                        child: GestureDetector(
+                                                          onTap: () async {
+                                                            await _deleteImage(
+                                                                prodImagesSqlDbE[
+                                                                        index]
+                                                                    .id,
+                                                                prodImagesSqlDbE[
+                                                                        index]
+                                                                    .imageType);
+                                                            _removeImage(
+                                                                prodImagesSqlDbE,
+                                                                index);
+                                                          },
+                                                          child: Icon(
+                                                            Icons.close,
+                                                            size: 20,
+                                                            color: Colors
+                                                                .grey[800],
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
@@ -477,8 +741,8 @@ class _PostInputFormState extends State<PostInputForm>
                                 height: 0,
                               )
                             : Consumer<ProdImagesSqlDbProvider>(
-                                child: Center(
-                                  child: Text(
+                                child: const Center(
+                                  child: const Text(
                                       'Got no images yet, start adding some!'),
                                 ),
                                 builder: (ctx, imageData, ch) {
@@ -493,7 +757,7 @@ class _PostInputFormState extends State<PostInputForm>
                                           child: Text(
                                               'Interior (${prodImagesSqlDbI.length})'),
                                         ),
-                                        SizedBox(
+                                        const SizedBox(
                                           height: 10,
                                         ),
                                         Container(
@@ -544,11 +808,15 @@ class _PostInputFormState extends State<PostInputForm>
                                                                 prodImagesSqlDbI[
                                                                         index]
                                                                     .imageType);
+                                                            _removeImage(
+                                                                prodImagesSqlDbI,
+                                                                index);
                                                           },
-                                                          child: Icon(
+                                                          child: const Icon(
                                                             Icons.close,
                                                             size: 20,
-                                                            color: Colors.white,
+                                                            color:
+                                                                bBackgroundColor,
                                                           ),
                                                         ),
                                                       ),
@@ -586,25 +854,31 @@ class _PostInputFormState extends State<PostInputForm>
                     children: [
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
+                        child: const Text(
                           'Product Category',
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 5,
                       ),
                       Container(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        // height: MediaQuery.of(context).size.height / 15,
+                        color: bScaffoldBackgroundColor,
                         child: DropdownButtonFormField<String>(
                           items: _catNames,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                           ),
                           onChanged: (value) async {
-                            setState(() {
-                              motorFormSqlDb.catName = value;
-                            });
+                            // setState(() {
+                            motorFormSqlDb.catName = value;
+
+                            // });
+
+                            // motorFormSqlDb.subCatType = "Unspecified";
+                            // await _updateMotorForm(motorFormSqlDb.id,
+                            //     'subCatType', motorFormSqlDb.subCatType);
+
+                            motorFormSqlDb.subCatType = "Unspecified";
                             await _updateMotorForm(motorFormSqlDb.id, 'catName',
                                 motorFormSqlDb.catName);
                           },
@@ -627,69 +901,68 @@ class _PostInputFormState extends State<PostInputForm>
                   if (motorFormSqlDb.catName != null)
                     Column(
                       children: [
-                        SizedBox(
+                        const SizedBox(
                           height: 5,
                         ),
                         Align(
                           alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Product Type',
+                          child: const Text(
+                            'Sub Product Category',
                           ),
                         ),
-                        SizedBox(
+                        const SizedBox(
                           height: 5,
                         ),
                         Container(
-                          color: Theme.of(context).scaffoldBackgroundColor,
+                          color: bScaffoldBackgroundColor,
                           child: DropdownButtonFormField<String>(
                             items: _subCatTypes,
-                            decoration: InputDecoration(
+                            decoration: const InputDecoration(
                               border: OutlineInputBorder(),
                             ),
                             onChanged: (value) async {
                               setState(() {
-                                motorFormSqlDb.subCatDocId = value;
-                                print(
-                                    'motorFormSqlDb.subCatDocId - ${motorFormSqlDb.subCatDocId}');
+                                motorFormSqlDb.subCatType = value;
                               });
-                              print(
-                                  'sub cat type - ${motorFormSqlDb.subCatDocId}');
+                              if (motorFormSqlDb.subCatType == 'Cars' ||
+                                  motorFormSqlDb.subCatType == 'Trucks' ||
+                                  motorFormSqlDb.subCatType == 'Caravans') {
+                                _specialVehicle = true;
+                              } else {
+                                _specialVehicle = false;
+                              }
                               await _updateMotorForm(motorFormSqlDb.id,
-                                  'subCatDocId', motorFormSqlDb.subCatDocId);
+                                  'subCatType', motorFormSqlDb.subCatType);
                             },
                             onSaved: (value) {
-                              motorFormSqlDb.subCatDocId = value;
+                              motorFormSqlDb.subCatType = value;
                             },
                             validator: (value) {
                               if (value == 'Unspecified' || value == null) {
-                                return 'Please select prod category!';
+                                return 'Please select type of the product!';
                               }
                               return null;
                             },
                             value: _motorFormCount > 0
-                                ? motorFormSqlDb.subCatDocId
+                                ? motorFormSqlDb.subCatType
                                 : _initialSelectedItem,
                           ),
                         ),
                       ],
                     ),
                   if (motorFormSqlDb.catName != null)
-                    if (motorFormSqlDb.catName.trim() == 'Car'.trim() ||
-                        motorFormSqlDb.catName.trim() == 'Motorbike'.trim() ||
-                        motorFormSqlDb.catName.trim() == 'Truck'.trim())
-                      motorDetailsUI(),
-                  if (motorFormSqlDb.catName != null)
-                    if (motorFormSqlDb.catName.trim() != 'Car'.trim() &&
-                        motorFormSqlDb.catName.trim() != 'Motorbike'.trim() &&
-                        motorFormSqlDb.catName.trim() != 'Truck'.trim())
-                      commonDetailsUI(),
+                    (motorFormSqlDb.catName.trim() == 'Vehicle'.trim() &&
+                            !motorFormSqlDb.subCatType
+                                .contains('Accessories') &&
+                            !motorFormSqlDb.subCatType.contains('Others'))
+                        ? motorDetailsUI(focusNode)
+                        : commonDetailsUI(focusNode),
                 ],
               ),
             ),
           ),
         ),
       ),
-
       Step(
         title: const Text('Spec'),
         isActive: _currentStep >= 0,
@@ -701,1402 +974,1392 @@ class _PostInputFormState extends State<PostInputForm>
               child: Column(
                 children: <Widget>[
                   if (motorFormSqlDb.catName != null)
-                    if (motorFormSqlDb.catName.trim() != 'Car'.trim() &&
-                        motorFormSqlDb.catName.trim() != 'Motorbike'.trim() &&
-                        motorFormSqlDb.catName.trim() != 'Truck'.trim())
-                      Column(
-                        children: [
-                          Text('Please Continue Further!!'),
-                        ],
-                      ),
-                  if (motorFormSqlDb.catName != null)
-                    if (motorFormSqlDb.catName.trim() == 'Car'.trim() ||
-                        motorFormSqlDb.catName.trim() == 'Motorbike'.trim() ||
-                        motorFormSqlDb.catName.trim() == 'Truck'.trim())
-                      Column(
-                        children: [
-                          Column(
+                    (motorFormSqlDb.catName.trim() == 'Vehicle'.trim() &&
+                            !motorFormSqlDb.subCatType
+                                .contains('Accessories') &&
+                            !motorFormSqlDb.subCatType.contains('Others'))
+                        ? Column(
                             children: [
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  'Mileage',
-                                ),
-                              ),
-                              SizedBox(
-                                height: 5,
-                              ),
-                              Container(
-                                color:
-                                    Theme.of(context).scaffoldBackgroundColor,
-                                height: MediaQuery.of(context).size.height / 15,
-                                child: TextFormField(
-                                  key: ValueKey('mileage'),
-                                  initialValue: motorFormSqlDb.mileage,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  onChanged: (value) async {
-                                    motorFormSqlDb.mileage = value;
-                                    await _updateMotorForm(motorFormSqlDb.id,
-                                        'mileage', motorFormSqlDb.mileage);
-                                  },
-                                  validator: (value) {
-                                    if (value.isEmpty) {
-                                      return 'Please enter mileage!';
-                                    }
-                                    return null;
-                                  },
-                                  onSaved: (value) {
-                                    motorFormSqlDb.mileage = value;
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(
-                            height: 20,
-                          ),
-                          Column(
-                            children: [
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  'Fuel Type',
-                                ),
-                              ),
-                              SizedBox(
-                                height: 5,
-                              ),
-                              // Container(
-                              //   color:
-                              //       Theme.of(context).scaffoldBackgroundColor,
-                              //   height: MediaQuery.of(context).size.height / 15,
-                              //   child: TextFormField(
-                              //     key: ValueKey('fuelType'),
-                              //     initialValue: motorFormSqlDb.fuelType != null
-                              //         ? motorFormSqlDb.fuelType
-                              //         : ' ',
-                              //     decoration: InputDecoration(
-                              //       border: OutlineInputBorder(),
-                              //     ),
-                              //     onChanged: (value) async {
-                              //       motorFormSqlDb.fuelType = value;
-                              //       await _updateMotorForm(motorFormSqlDb.id,
-                              //           'fuelType', motorFormSqlDb.fuelType);
-                              //     },
-                              //     onSaved: (value) {
-                              //       motorFormSqlDb.fuelType = value;
-                              //     },
-                              //   ),
-                              // ),
-                              Container(
-                                color:
-                                    Theme.of(context).scaffoldBackgroundColor,
-                                // height:
-                                //     MediaQuery.of(context).size.height / 15,
-                                child: DropdownButtonFormField<String>(
-                                  items: _fuelType,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  onChanged: (value) async {
-                                    setState(() {
-                                      motorFormSqlDb.fuelType = value;
-                                    });
-                                    await _updateMotorForm(motorFormSqlDb.id,
-                                        'fuelType', motorFormSqlDb.fuelType);
-                                  },
-                                  onSaved: (value) {
-                                    motorFormSqlDb.fuelType = value;
-                                  },
-                                  validator: (value) {
-                                    if (value == 'Unspecified') {
-                                      return 'Please select Fuel Type!';
-                                    }
-                                    return null;
-                                  },
-                                  value: motorFormSqlDb.fuelType != null
-                                      ? motorFormSqlDb.fuelType
-                                      : _initialSelectedItem,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(
-                            height: 20,
-                          ),
-
-                          //
-                          Column(
-                            children: [
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  'Exterior Color',
-                                ),
-                              ),
-                              SizedBox(
-                                height: 5,
-                              ),
-                              Container(
-                                color:
-                                    Theme.of(context).scaffoldBackgroundColor,
-                                height: MediaQuery.of(context).size.height / 15,
-                                child: TextFormField(
-                                  key: ValueKey('exteriorColor'),
-                                  controller: controllerEC,
-                                  // initialValue: motorFormSqlDb.exteriorColor,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  onChanged: (value) async {
-                                    motorFormSqlDb.exteriorColor = value;
-                                  },
-                                  validator: (value) {
-                                    if (value.isEmpty) {
-                                      return 'Please enter exteriorColor!';
-                                    }
-                                    return null;
-                                  },
-                                  onSaved: (value) async {
-                                    motorFormSqlDb.exteriorColor = value;
-                                    await _updateMotorForm(
-                                        motorFormSqlDb.id,
-                                        'exteriorColor',
-                                        motorFormSqlDb.exteriorColor);
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(
-                            height: 20,
-                          ),
-                          //
-
-                          Column(
-                            children: [
-                              // Row(
-                              //   children: [
-                              //     Text("Exterior Color: "),
-                              //     Text(motorFormSqlDb.exteriorColor != null
-                              //         ? motorFormSqlDb.exteriorColor
-                              //         : 'Select Color'),
-                              //   ],
-                              // ),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceAround,
+                              Column(
                                 children: [
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      setState(() {
-                                        motorFormSqlDb.exteriorColor = "Red";
-                                        controllerEC.text = "Red";
-                                      });
-                                      await _updateMotorForm(
-                                          motorFormSqlDb.id,
-                                          'exteriorColor',
-                                          motorFormSqlDb.exteriorColor);
-                                    },
-                                    child: Text(''),
-                                    style: ElevatedButton.styleFrom(
-                                      shape: CircleBorder(
-                                        side: motorFormSqlDb.exteriorColor ==
-                                                "Red"
-                                            ? BorderSide(
-                                                width: 2,
-                                                style: BorderStyle.solid,
-                                              )
-                                            : BorderSide.none,
-                                      ),
-                                      primary: Colors.red[700],
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: const Text(
+                                      'Mileage',
                                     ),
                                   ),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      setState(() {
-                                        motorFormSqlDb.exteriorColor = "Orange";
-                                        controllerEC.text = "Orange";
-                                      });
-                                      await _updateMotorForm(
-                                          motorFormSqlDb.id,
-                                          'exteriorColor',
-                                          motorFormSqlDb.exteriorColor);
-                                    },
-                                    child: Text(''),
-                                    style: ElevatedButton.styleFrom(
-                                      shape: CircleBorder(
-                                        side: motorFormSqlDb.exteriorColor ==
-                                                "Orange"
-                                            ? BorderSide(
-                                                width: 2,
-                                                style: BorderStyle.solid,
-                                              )
-                                            : BorderSide.none,
-                                      ),
-                                      primary: Colors.orange[700],
-                                    ),
+                                  const SizedBox(
+                                    height: 5,
                                   ),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      setState(() {
-                                        motorFormSqlDb.exteriorColor = "Yellow";
-                                        controllerEC.text = "Yellow";
-                                      });
-                                      await _updateMotorForm(
-                                          motorFormSqlDb.id,
-                                          'exteriorColor',
-                                          motorFormSqlDb.exteriorColor);
-                                    },
-                                    child: Text(''),
-                                    style: ElevatedButton.styleFrom(
-                                      shape: CircleBorder(
-                                        side: motorFormSqlDb.exteriorColor ==
-                                                "Yellow"
-                                            ? BorderSide(
-                                                width: 2,
-                                                style: BorderStyle.solid,
-                                              )
-                                            : BorderSide.none,
+                                  Container(
+                                    color: bScaffoldBackgroundColor,
+                                    height:
+                                        MediaQuery.of(context).size.height / 15,
+                                    child: TextFormField(
+                                      key: ValueKey('mileage'),
+                                      onEditingComplete: () =>
+                                          focusNode.nextFocus(),
+                                      initialValue: motorFormSqlDb.mileage,
+                                      keyboardType: TextInputType.number,
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
                                       ),
-                                      primary: Colors.yellow[700],
-                                    ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      setState(() {
-                                        motorFormSqlDb.exteriorColor = "Green";
-                                        controllerEC.text = "Green";
-                                      });
-                                      await _updateMotorForm(
-                                          motorFormSqlDb.id,
-                                          'exteriorColor',
-                                          motorFormSqlDb.exteriorColor);
-                                    },
-                                    child: Text(''),
-                                    style: ElevatedButton.styleFrom(
-                                      shape: CircleBorder(
-                                        side: motorFormSqlDb.exteriorColor ==
-                                                "Green"
-                                            ? BorderSide(
-                                                width: 2,
-                                                style: BorderStyle.solid,
-                                              )
-                                            : BorderSide.none,
-                                      ),
-                                      primary: Colors.green[700],
-                                    ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      setState(() {
-                                        motorFormSqlDb.exteriorColor = "Blue";
-                                        controllerEC.text = "Blue";
-                                      });
-                                      await _updateMotorForm(
-                                          motorFormSqlDb.id,
-                                          'exteriorColor',
-                                          motorFormSqlDb.exteriorColor);
-                                    },
-                                    child: Text(''),
-                                    style: ElevatedButton.styleFrom(
-                                      shape: CircleBorder(
-                                        side: motorFormSqlDb.exteriorColor ==
-                                                "Blue"
-                                            ? BorderSide(
-                                                width: 2,
-                                                style: BorderStyle.solid,
-                                              )
-                                            : BorderSide.none,
-                                      ),
-                                      primary: Colors.blue[700],
+                                      onChanged: (value) async {
+                                        setState(() {
+                                          motorFormSqlDb.mileage = value;
+                                        });
+                                        await _updateMotorForm(
+                                            motorFormSqlDb.id,
+                                            'mileage',
+                                            motorFormSqlDb.mileage);
+                                      },
+                                      validator: (value) {
+                                        if (value.isEmpty) {
+                                          return 'Please enter mileage!';
+                                        }
+                                        return null;
+                                      },
+                                      onSaved: (value) {
+                                        motorFormSqlDb.mileage = value;
+                                      },
                                     ),
                                   ),
                                 ],
                               ),
-                              SizedBox(
-                                height: 10,
+                              const SizedBox(
+                                height: 20,
                               ),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceAround,
+                              Column(
                                 children: [
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      setState(() {
-                                        motorFormSqlDb.exteriorColor = "Purple";
-                                        controllerEC.text = "Purple";
-                                      });
-                                      await _updateMotorForm(
-                                          motorFormSqlDb.id,
-                                          'exteriorColor',
-                                          motorFormSqlDb.exteriorColor);
-                                    },
-                                    child: Text(''),
-                                    style: ElevatedButton.styleFrom(
-                                      shape: CircleBorder(
-                                        side: motorFormSqlDb.exteriorColor ==
-                                                "Purple"
-                                            ? BorderSide(
-                                                width: 2,
-                                                style: BorderStyle.solid,
-                                              )
-                                            : BorderSide.none,
-                                      ),
-                                      primary: Colors.purple[700],
+                                  const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: const Text(
+                                      'Fuel Type',
                                     ),
                                   ),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      setState(() {
-                                        motorFormSqlDb.exteriorColor = "Black";
-                                        controllerEC.text = "Black";
-                                      });
-                                      await _updateMotorForm(
-                                          motorFormSqlDb.id,
-                                          'exteriorColor',
-                                          motorFormSqlDb.exteriorColor);
-                                    },
-                                    child: Text(''),
-                                    style: ElevatedButton.styleFrom(
-                                      shape: CircleBorder(
-                                        side: motorFormSqlDb.exteriorColor ==
-                                                "Black"
-                                            ? BorderSide(
-                                                width: 2,
-                                                style: BorderStyle.solid,
-                                                color: Colors.grey[200],
-                                              )
-                                            : BorderSide.none,
-                                      ),
-                                      primary: Colors.black,
-                                    ),
+                                  const SizedBox(
+                                    height: 5,
                                   ),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      setState(() {
-                                        motorFormSqlDb.exteriorColor = "Grey";
-                                        controllerEC.text = "Grey";
-                                      });
-                                      await _updateMotorForm(
-                                          motorFormSqlDb.id,
-                                          'exteriorColor',
-                                          motorFormSqlDb.exteriorColor);
-                                    },
-                                    child: Text(''),
-                                    style: ElevatedButton.styleFrom(
-                                      shape: CircleBorder(
-                                        side: motorFormSqlDb.exteriorColor ==
-                                                "Grey"
-                                            ? BorderSide(
-                                                width: 2,
-                                                style: BorderStyle.solid,
-                                              )
-                                            : BorderSide.none,
+                                  Container(
+                                    color: bScaffoldBackgroundColor,
+                                    child: DropdownButtonFormField<String>(
+                                      items: _fuelType,
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
                                       ),
-                                      primary: Colors.grey[300],
-                                    ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      setState(() {
-                                        motorFormSqlDb.exteriorColor = "Brown";
-                                        controllerEC.text = "Brown";
-                                      });
-                                      await _updateMotorForm(
-                                          motorFormSqlDb.id,
-                                          'exteriorColor',
-                                          motorFormSqlDb.exteriorColor);
-                                    },
-                                    child: Text(''),
-                                    style: ElevatedButton.styleFrom(
-                                      shape: CircleBorder(
-                                        side: motorFormSqlDb.exteriorColor ==
-                                                "Brown"
-                                            ? BorderSide(
-                                                width: 2,
-                                                style: BorderStyle.solid,
-                                              )
-                                            : BorderSide.none,
-                                      ),
-                                      primary: Colors.brown[500],
-                                    ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      setState(() {
-                                        motorFormSqlDb.exteriorColor = "White";
-                                        controllerEC.text = "White";
-                                      });
-                                      await _updateMotorForm(
-                                          motorFormSqlDb.id,
-                                          'exteriorColor',
-                                          motorFormSqlDb.exteriorColor);
-                                    },
-                                    child: Text(''),
-                                    style: ElevatedButton.styleFrom(
-                                      shape: CircleBorder(
-                                        side: motorFormSqlDb.exteriorColor ==
-                                                "White"
-                                            ? BorderSide(
-                                                width: 2,
-                                                style: BorderStyle.solid,
-                                              )
-                                            : BorderSide.none,
-                                      ),
-                                      primary: Colors.white,
+                                      onChanged: (value) async {
+                                        setState(() {
+                                          motorFormSqlDb.fuelType = value;
+                                        });
+                                        await _updateMotorForm(
+                                            motorFormSqlDb.id,
+                                            'fuelType',
+                                            motorFormSqlDb.fuelType);
+                                      },
+                                      onSaved: (value) {
+                                        motorFormSqlDb.fuelType = value;
+                                      },
+                                      validator: (value) {
+                                        if (value == 'Unspecified') {
+                                          return 'Please select Fuel Type!';
+                                        }
+                                        return null;
+                                      },
+                                      value: motorFormSqlDb.fuelType != null
+                                          ? motorFormSqlDb.fuelType
+                                          : _initialSelectedItem,
                                     ),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                          SizedBox(
-                            height: 20,
-                          ),
-                          if (motorFormSqlDb.catName.trim() !=
-                              'Motorbike'.trim())
-                            Column(
-                              children: [
+                              const SizedBox(
+                                height: 20,
+                              ),
+
+                              //
+                              Column(
+                                children: [
+                                  const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: const Text(
+                                      'Exterior Color',
+                                    ),
+                                  ),
+                                  const SizedBox(
+                                    height: 5,
+                                  ),
+                                  Container(
+                                    color: bScaffoldBackgroundColor,
+                                    height:
+                                        MediaQuery.of(context).size.height / 15,
+                                    child: TextFormField(
+                                      enabled: false,
+                                      key: ValueKey('exteriorColor'),
+                                      onEditingComplete: () =>
+                                          focusNode.nextFocus(),
+                                      controller: controllerEC,
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(
+                                height: 20,
+                              ),
+                              //
+
+                              Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceAround,
+                                    children: [
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          setState(() {
+                                            motorFormSqlDb.exteriorColor =
+                                                "Red";
+                                            controllerEC.text = "Red";
+                                          });
+                                          await _updateMotorForm(
+                                              motorFormSqlDb.id,
+                                              'exteriorColor',
+                                              motorFormSqlDb.exteriorColor);
+                                        },
+                                        child: const Text(''),
+                                        style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(
+                                            side: motorFormSqlDb
+                                                        .exteriorColor ==
+                                                    "Red"
+                                                ? BorderSide(
+                                                    width: 2,
+                                                    style: BorderStyle.solid,
+                                                  )
+                                                : BorderSide.none,
+                                          ),
+                                          primary: Colors.red[700],
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          setState(() {
+                                            motorFormSqlDb.exteriorColor =
+                                                "Orange";
+                                            controllerEC.text = "Orange";
+                                          });
+                                          await _updateMotorForm(
+                                              motorFormSqlDb.id,
+                                              'exteriorColor',
+                                              motorFormSqlDb.exteriorColor);
+                                        },
+                                        child: const Text(''),
+                                        style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(
+                                            side: motorFormSqlDb
+                                                        .exteriorColor ==
+                                                    "Orange"
+                                                ? const BorderSide(
+                                                    width: 2,
+                                                    style: BorderStyle.solid,
+                                                  )
+                                                : BorderSide.none,
+                                          ),
+                                          primary: Colors.orange[700],
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          setState(() {
+                                            motorFormSqlDb.exteriorColor =
+                                                "Yellow";
+                                            controllerEC.text = "Yellow";
+                                          });
+                                          await _updateMotorForm(
+                                              motorFormSqlDb.id,
+                                              'exteriorColor',
+                                              motorFormSqlDb.exteriorColor);
+                                        },
+                                        child: const Text(''),
+                                        style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(
+                                            side: motorFormSqlDb
+                                                        .exteriorColor ==
+                                                    "Yellow"
+                                                ? const BorderSide(
+                                                    width: 2,
+                                                    style: BorderStyle.solid,
+                                                  )
+                                                : BorderSide.none,
+                                          ),
+                                          primary: Colors.yellow[700],
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          setState(() {
+                                            motorFormSqlDb.exteriorColor =
+                                                "Green";
+                                            controllerEC.text = "Green";
+                                          });
+                                          await _updateMotorForm(
+                                              motorFormSqlDb.id,
+                                              'exteriorColor',
+                                              motorFormSqlDb.exteriorColor);
+                                        },
+                                        child: const Text(''),
+                                        style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(
+                                            side: motorFormSqlDb
+                                                        .exteriorColor ==
+                                                    "Green"
+                                                ? const BorderSide(
+                                                    width: 2,
+                                                    style: BorderStyle.solid,
+                                                  )
+                                                : BorderSide.none,
+                                          ),
+                                          primary: Colors.green[700],
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          setState(() {
+                                            motorFormSqlDb.exteriorColor =
+                                                "Blue";
+                                            controllerEC.text = "Blue";
+                                          });
+                                          await _updateMotorForm(
+                                              motorFormSqlDb.id,
+                                              'exteriorColor',
+                                              motorFormSqlDb.exteriorColor);
+                                        },
+                                        child: const Text(''),
+                                        style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(
+                                            side: motorFormSqlDb
+                                                        .exteriorColor ==
+                                                    "Blue"
+                                                ? const BorderSide(
+                                                    width: 2,
+                                                    style: BorderStyle.solid,
+                                                  )
+                                                : BorderSide.none,
+                                          ),
+                                          primary: Colors.blue[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(
+                                    height: 10,
+                                  ),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceAround,
+                                    children: [
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          setState(() {
+                                            motorFormSqlDb.exteriorColor =
+                                                "Purple";
+                                            controllerEC.text = "Purple";
+                                          });
+                                          await _updateMotorForm(
+                                              motorFormSqlDb.id,
+                                              'exteriorColor',
+                                              motorFormSqlDb.exteriorColor);
+                                        },
+                                        child: const Text(''),
+                                        style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(
+                                            side: motorFormSqlDb
+                                                        .exteriorColor ==
+                                                    "Purple"
+                                                ? const BorderSide(
+                                                    width: 2,
+                                                    style: BorderStyle.solid,
+                                                  )
+                                                : BorderSide.none,
+                                          ),
+                                          primary: Colors.purple[700],
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          setState(() {
+                                            motorFormSqlDb.exteriorColor =
+                                                "Black";
+                                            controllerEC.text = "Black";
+                                          });
+                                          await _updateMotorForm(
+                                              motorFormSqlDb.id,
+                                              'exteriorColor',
+                                              motorFormSqlDb.exteriorColor);
+                                        },
+                                        child: const Text(''),
+                                        style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(
+                                            side: motorFormSqlDb
+                                                        .exteriorColor ==
+                                                    "Black"
+                                                ? BorderSide(
+                                                    width: 2,
+                                                    style: BorderStyle.solid,
+                                                    color: Colors.grey[200],
+                                                  )
+                                                : BorderSide.none,
+                                          ),
+                                          primary: Colors.black,
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          setState(() {
+                                            motorFormSqlDb.exteriorColor =
+                                                "Grey";
+                                            controllerEC.text = "Grey";
+                                          });
+                                          await _updateMotorForm(
+                                              motorFormSqlDb.id,
+                                              'exteriorColor',
+                                              motorFormSqlDb.exteriorColor);
+                                        },
+                                        child: const Text(''),
+                                        style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(
+                                            side: motorFormSqlDb
+                                                        .exteriorColor ==
+                                                    "Grey"
+                                                ? const BorderSide(
+                                                    width: 2,
+                                                    style: BorderStyle.solid,
+                                                  )
+                                                : BorderSide.none,
+                                          ),
+                                          primary: Colors.grey[300],
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          setState(() {
+                                            motorFormSqlDb.exteriorColor =
+                                                "Brown";
+                                            controllerEC.text = "Brown";
+                                          });
+                                          await _updateMotorForm(
+                                              motorFormSqlDb.id,
+                                              'exteriorColor',
+                                              motorFormSqlDb.exteriorColor);
+                                        },
+                                        child: const Text(''),
+                                        style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(
+                                            side: motorFormSqlDb
+                                                        .exteriorColor ==
+                                                    "Brown"
+                                                ? const BorderSide(
+                                                    width: 2,
+                                                    style: BorderStyle.solid,
+                                                  )
+                                                : BorderSide.none,
+                                          ),
+                                          primary: Colors.brown[500],
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          setState(() {
+                                            motorFormSqlDb.exteriorColor =
+                                                "White";
+                                            controllerEC.text = "White";
+                                          });
+                                          await _updateMotorForm(
+                                              motorFormSqlDb.id,
+                                              'exteriorColor',
+                                              motorFormSqlDb.exteriorColor);
+                                        },
+                                        child: const Text(''),
+                                        style: ElevatedButton.styleFrom(
+                                          shape: CircleBorder(
+                                            side: motorFormSqlDb
+                                                        .exteriorColor ==
+                                                    "White"
+                                                ? const BorderSide(
+                                                    width: 2,
+                                                    style: BorderStyle.solid,
+                                                  )
+                                                : BorderSide.none,
+                                          ),
+                                          primary: bBackgroundColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(
+                                height: 20,
+                              ),
+                              if (_specialVehicle)
                                 Column(
                                   children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Vehicle Type',
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      height: 5,
-                                    ),
-                                    Container(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      height:
-                                          MediaQuery.of(context).size.height /
-                                              15,
-                                      child: TextFormField(
-                                        key: ValueKey('vehicleType'),
-                                        initialValue:
-                                            motorFormSqlDb.vehicleType != null
+                                    Column(
+                                      children: [
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: const Text(
+                                            'Vehicle Type',
+                                          ),
+                                        ),
+                                        const SizedBox(
+                                          height: 5,
+                                        ),
+                                        Container(
+                                          color: bScaffoldBackgroundColor,
+                                          child:
+                                              DropdownButtonFormField<String>(
+                                            items: _vehicleType,
+                                            decoration: const InputDecoration(
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            onChanged: (value) async {
+                                              setState(() {
+                                                motorFormSqlDb.vehicleType =
+                                                    value;
+                                              });
+                                              await _updateMotorForm(
+                                                  motorFormSqlDb.id,
+                                                  'vehicleType',
+                                                  motorFormSqlDb.vehicleType);
+                                            },
+                                            onSaved: (value) {
+                                              motorFormSqlDb.vehicleType =
+                                                  value;
+                                            },
+                                            validator: (value) {
+                                              if (value == 'Unspecified') {
+                                                return 'Please select Vehicle Type!';
+                                              }
+                                              return null;
+                                            },
+                                            value: motorFormSqlDb.vehicleType !=
+                                                    null
                                                 ? motorFormSqlDb.vehicleType
-                                                : ' ',
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(),
+                                                : _initialSelectedItem,
+                                          ),
                                         ),
-                                        onChanged: (value) async {
-                                          motorFormSqlDb.vehicleType = value;
-                                          await _updateMotorForm(
-                                              motorFormSqlDb.id,
-                                              'vehicleType',
-                                              motorFormSqlDb.vehicleType);
-                                        },
-                                        validator: (value) {
-                                          if (value.isEmpty) {
-                                            return 'Please enter vehicle type!';
-                                          }
-                                          return null;
-                                        },
-                                        onSaved: (value) {
-                                          motorFormSqlDb.vehicleType = value;
-                                        },
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                Column(
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Engine',
-                                      ),
+                                    const SizedBox(
+                                      height: 20,
                                     ),
-                                    SizedBox(
-                                      height: 5,
-                                    ),
-                                    Container(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      height:
-                                          MediaQuery.of(context).size.height /
+                                    Column(
+                                      children: [
+                                        const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: const Text(
+                                            'Engine',
+                                          ),
+                                        ),
+                                        const SizedBox(
+                                          height: 5,
+                                        ),
+                                        Container(
+                                          color: bScaffoldBackgroundColor,
+                                          height: MediaQuery.of(context)
+                                                  .size
+                                                  .height /
                                               15,
-                                      child: TextFormField(
-                                        key: ValueKey('engine'),
-                                        initialValue:
-                                            motorFormSqlDb.engine != null
-                                                ? motorFormSqlDb.engine
-                                                : ' ',
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(),
+                                          child: TextFormField(
+                                            key: ValueKey('engine'),
+                                            onEditingComplete: () =>
+                                                focusNode.nextFocus(),
+                                            initialValue: motorFormSqlDb.engine,
+                                            decoration: const InputDecoration(
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            onChanged: (value) async {
+                                              setState(() {
+                                                motorFormSqlDb.engine = value;
+                                              });
+                                              await _updateMotorForm(
+                                                  motorFormSqlDb.id,
+                                                  'engine',
+                                                  motorFormSqlDb.engine);
+                                            },
+                                            validator: (value) {
+                                              if (value.isEmpty) {
+                                                return 'Please enter engine!';
+                                              }
+                                              return null;
+                                            },
+                                            onSaved: (value) {
+                                              motorFormSqlDb.engine = value;
+                                            },
+                                          ),
                                         ),
-                                        onChanged: (value) async {
-                                          motorFormSqlDb.engine = value;
-                                          await _updateMotorForm(
-                                              motorFormSqlDb.id,
-                                              'engine',
-                                              motorFormSqlDb.engine);
-                                        },
-                                        validator: (value) {
-                                          if (value.isEmpty) {
-                                            return 'Please enter engine!';
-                                          }
-                                          return null;
-                                        },
-                                        onSaved: (value) {
-                                          motorFormSqlDb.engine = value;
-                                        },
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                Column(
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Options',
-                                      ),
+                                    const SizedBox(
+                                      height: 20,
                                     ),
-                                    SizedBox(
-                                      height: 5,
-                                    ),
-                                    Container(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      child: TextFormField(
-                                        maxLines: 5,
-                                        key: ValueKey('options'),
-                                        initialValue: motorFormSqlDb.options,
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(),
+                                    Column(
+                                      children: [
+                                        const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: const Text(
+                                            'Options',
+                                          ),
                                         ),
-                                        onChanged: (value) async {
-                                          motorFormSqlDb.options = value;
-                                          await _updateMotorForm(
-                                              motorFormSqlDb.id,
-                                              'options',
-                                              motorFormSqlDb.options);
-                                        },
-                                        onSaved: (value) {
-                                          motorFormSqlDb.options = value;
-                                        },
-                                      ),
+                                        const SizedBox(
+                                          height: 5,
+                                        ),
+                                        Container(
+                                          color: bScaffoldBackgroundColor,
+                                          child: TextFormField(
+                                            maxLines: 5,
+                                            key: ValueKey('options'),
+                                            onEditingComplete: () =>
+                                                focusNode.nextFocus(),
+                                            initialValue:
+                                                motorFormSqlDb.options,
+                                            decoration: const InputDecoration(
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            onChanged: (value) async {
+                                              setState(() {
+                                                motorFormSqlDb.options = value;
+                                              });
+                                              await _updateMotorForm(
+                                                  motorFormSqlDb.id,
+                                                  'options',
+                                                  motorFormSqlDb.options);
+                                            },
+                                            onSaved: (value) {
+                                              motorFormSqlDb.options = value;
+                                            },
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                Column(
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Sub Model',
-                                      ),
+                                    const SizedBox(
+                                      height: 20,
                                     ),
-                                    SizedBox(
-                                      height: 5,
+                                    Column(
+                                      children: [
+                                        const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: const Text(
+                                            'Sub Model',
+                                          ),
+                                        ),
+                                        const SizedBox(
+                                          height: 5,
+                                        ),
+                                        Container(
+                                          color: bScaffoldBackgroundColor,
+                                          child:
+                                              DropdownButtonFormField<String>(
+                                            items: _subModel,
+                                            decoration: const InputDecoration(
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            onChanged: (value) async {
+                                              setState(() {
+                                                motorFormSqlDb.subModel = value;
+                                              });
+                                              await _updateMotorForm(
+                                                  motorFormSqlDb.id,
+                                                  'subModel',
+                                                  motorFormSqlDb.subModel);
+                                            },
+                                            onSaved: (value) {
+                                              motorFormSqlDb.subModel = value;
+                                            },
+                                            validator: (value) {
+                                              if (value == 'Unspecified') {
+                                                return 'Please select Sub Model!';
+                                              }
+                                              return null;
+                                            },
+                                            value:
+                                                motorFormSqlDb.subModel != null
+                                                    ? motorFormSqlDb.subModel
+                                                    : _initialSelectedItem,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    Container(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      height:
-                                          MediaQuery.of(context).size.height /
+                                    const SizedBox(
+                                      height: 20,
+                                    ),
+                                    Column(
+                                      children: [
+                                        const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: const Text(
+                                            'Number of Cylinders',
+                                          ),
+                                        ),
+                                        const SizedBox(
+                                          height: 5,
+                                        ),
+                                        Container(
+                                          color: bScaffoldBackgroundColor,
+                                          height: MediaQuery.of(context)
+                                                  .size
+                                                  .height /
                                               15,
-                                      child: TextFormField(
-                                        key: ValueKey('subModel'),
-                                        initialValue: motorFormSqlDb.subModel,
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(),
+                                          child: TextFormField(
+                                            key: ValueKey('numberOfCylinders'),
+                                            onEditingComplete: () =>
+                                                focusNode.nextFocus(),
+                                            keyboardType: TextInputType.number,
+                                            initialValue: motorFormSqlDb
+                                                .numberOfCylinders,
+                                            decoration: const InputDecoration(
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            onChanged: (value) async {
+                                              setState(() {
+                                                motorFormSqlDb
+                                                    .numberOfCylinders = value;
+                                              });
+                                              await _updateMotorForm(
+                                                  motorFormSqlDb.id,
+                                                  'numberOfCylinders',
+                                                  motorFormSqlDb
+                                                      .numberOfCylinders);
+                                            },
+                                            validator: (value) {
+                                              if (value.isEmpty) {
+                                                return 'Please enter numberOfCylinders!';
+                                              }
+                                              return null;
+                                            },
+                                            onSaved: (value) {
+                                              motorFormSqlDb.numberOfCylinders =
+                                                  value;
+                                            },
+                                          ),
                                         ),
-                                        onChanged: (value) async {
-                                          motorFormSqlDb.subModel = value;
-                                          await _updateMotorForm(
-                                              motorFormSqlDb.id,
-                                              'subModel',
-                                              motorFormSqlDb.subModel);
-                                        },
-                                        onSaved: (value) {
-                                          motorFormSqlDb.subModel = value;
-                                        },
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                Column(
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Number of Cylinders',
-                                      ),
+                                    const SizedBox(
+                                      height: 20,
                                     ),
-                                    SizedBox(
-                                      height: 5,
-                                    ),
-                                    Container(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      height:
-                                          MediaQuery.of(context).size.height /
-                                              15,
-                                      child: TextFormField(
-                                        key: ValueKey('numberOfCylinders'),
-                                        initialValue: motorFormSqlDb
-                                                    .numberOfCylinders !=
-                                                null
-                                            ? motorFormSqlDb.numberOfCylinders
-                                            : ' ',
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(),
+                                    Column(
+                                      children: [
+                                        const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: const Text(
+                                            'Safety Features',
+                                          ),
                                         ),
-                                        onChanged: (value) async {
-                                          motorFormSqlDb.numberOfCylinders =
-                                              value;
-                                          await _updateMotorForm(
-                                              motorFormSqlDb.id,
-                                              'numberOfCylinders',
-                                              motorFormSqlDb.numberOfCylinders);
-                                        },
-                                        onSaved: (value) {
-                                          motorFormSqlDb.numberOfCylinders =
-                                              value;
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                Column(
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Safety Features',
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      height: 5,
-                                    ),
-                                    Container(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      height:
-                                          MediaQuery.of(context).size.height /
+                                        const SizedBox(
+                                          height: 5,
+                                        ),
+                                        Container(
+                                          color: bScaffoldBackgroundColor,
+                                          height: MediaQuery.of(context)
+                                                  .size
+                                                  .height /
                                               15,
-                                      child: TextFormField(
-                                        key: ValueKey('safetyFeatures'),
-                                        initialValue:
-                                            motorFormSqlDb.safetyFeatures !=
+                                          child: TextFormField(
+                                            key: ValueKey('safetyFeatures'),
+                                            onEditingComplete: () =>
+                                                focusNode.nextFocus(),
+                                            initialValue: motorFormSqlDb
+                                                        .safetyFeatures !=
                                                     null
                                                 ? motorFormSqlDb.safetyFeatures
-                                                : ' ',
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(),
+                                                : '',
+                                            decoration: const InputDecoration(
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            onChanged: (value) async {
+                                              setState(() {
+                                                motorFormSqlDb.safetyFeatures =
+                                                    value;
+                                              });
+                                              await _updateMotorForm(
+                                                  motorFormSqlDb.id,
+                                                  'safetyFeatures',
+                                                  motorFormSqlDb
+                                                      .safetyFeatures);
+                                            },
+                                            onSaved: (value) {
+                                              motorFormSqlDb.safetyFeatures =
+                                                  value;
+                                            },
+                                          ),
                                         ),
-                                        onChanged: (value) async {
-                                          motorFormSqlDb.safetyFeatures = value;
-                                          await _updateMotorForm(
-                                              motorFormSqlDb.id,
-                                              'safetyFeatures',
-                                              motorFormSqlDb.safetyFeatures);
-                                        },
-                                        onSaved: (value) {
-                                          motorFormSqlDb.safetyFeatures = value;
-                                        },
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                Column(
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Drive Type',
-                                      ),
+                                    const SizedBox(
+                                      height: 20,
                                     ),
-                                    SizedBox(
-                                      height: 5,
-                                    ),
-                                    Container(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      height:
-                                          MediaQuery.of(context).size.height /
-                                              15,
-                                      child: TextFormField(
-                                        key: ValueKey('driveType'),
-                                        initialValue:
-                                            motorFormSqlDb.driveType != null
-                                                ? motorFormSqlDb.driveType
-                                                : ' ',
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(),
+                                    Column(
+                                      children: [
+                                        const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: const Text(
+                                            'Drive Type',
+                                          ),
                                         ),
-                                        onChanged: (value) async {
-                                          motorFormSqlDb.driveType = value;
-                                          await _updateMotorForm(
-                                              motorFormSqlDb.id,
-                                              'driveType',
-                                              motorFormSqlDb.driveType);
-                                        },
-                                        onSaved: (value) {
-                                          motorFormSqlDb.driveType = value;
-                                        },
-                                      ),
+                                        const SizedBox(
+                                          height: 5,
+                                        ),
+                                        Container(
+                                          color: bScaffoldBackgroundColor,
+                                          child:
+                                              DropdownButtonFormField<String>(
+                                            items: _driveType,
+                                            decoration: const InputDecoration(
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            onChanged: (value) async {
+                                              setState(() {
+                                                motorFormSqlDb.driveType =
+                                                    value;
+                                              });
+                                              await _updateMotorForm(
+                                                  motorFormSqlDb.id,
+                                                  'driveType',
+                                                  motorFormSqlDb.driveType);
+                                            },
+                                            onSaved: (value) {
+                                              motorFormSqlDb.driveType = value;
+                                            },
+                                            validator: (value) {
+                                              if (value == 'Unspecified') {
+                                                return 'Please select Drive Type!';
+                                              }
+                                              return null;
+                                            },
+                                            value:
+                                                motorFormSqlDb.driveType != null
+                                                    ? motorFormSqlDb.driveType
+                                                    : _initialSelectedItem,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                Column(
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Body Type',
-                                      ),
+                                    const SizedBox(
+                                      height: 20,
                                     ),
-                                    SizedBox(
-                                      height: 5,
+                                    Column(
+                                      children: [
+                                        const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: const Text(
+                                            'Body Type',
+                                          ),
+                                        ),
+                                        const SizedBox(
+                                          height: 5,
+                                        ),
+                                        Container(
+                                          color: bScaffoldBackgroundColor,
+                                          child:
+                                              DropdownButtonFormField<String>(
+                                            items: _bodyType,
+                                            decoration: const InputDecoration(
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            onChanged: (value) async {
+                                              setState(() {
+                                                motorFormSqlDb.bodyType = value;
+                                              });
+                                              await _updateMotorForm(
+                                                  motorFormSqlDb.id,
+                                                  'bodyType',
+                                                  motorFormSqlDb.bodyType);
+                                            },
+                                            onSaved: (value) {
+                                              motorFormSqlDb.bodyType = value;
+                                            },
+                                            validator: (value) {
+                                              if (value == 'Unspecified') {
+                                                return 'Please select Body Type!';
+                                              }
+                                              return null;
+                                            },
+                                            value:
+                                                motorFormSqlDb.bodyType != null
+                                                    ? motorFormSqlDb.bodyType
+                                                    : _initialSelectedItem,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    Container(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      height:
-                                          MediaQuery.of(context).size.height /
+                                    const SizedBox(
+                                      height: 20,
+                                    ),
+                                    Column(
+                                      children: [
+                                        const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: const Text(
+                                            'Trim',
+                                          ),
+                                        ),
+                                        const SizedBox(
+                                          height: 5,
+                                        ),
+                                        Container(
+                                          color: bScaffoldBackgroundColor,
+                                          height: MediaQuery.of(context)
+                                                  .size
+                                                  .height /
                                               12,
-                                      child: TextFormField(
-                                        key: ValueKey('bodyType'),
-                                        initialValue:
-                                            motorFormSqlDb.bodyType != null
-                                                ? motorFormSqlDb.bodyType
-                                                : ' ',
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(),
+                                          child: TextFormField(
+                                            key: ValueKey('trim'),
+                                            onEditingComplete: () =>
+                                                focusNode.nextFocus(),
+                                            initialValue:
+                                                motorFormSqlDb.trim != null
+                                                    ? motorFormSqlDb.trim
+                                                    : ' ',
+                                            decoration: const InputDecoration(
+                                              border:
+                                                  const OutlineInputBorder(),
+                                            ),
+                                            onChanged: (value) async {
+                                              setState(() {
+                                                motorFormSqlDb.trim = value;
+                                              });
+                                              await _updateMotorForm(
+                                                  motorFormSqlDb.id,
+                                                  'trim',
+                                                  motorFormSqlDb.trim);
+                                            },
+                                            onSaved: (value) {
+                                              motorFormSqlDb.trim = value;
+                                            },
+                                          ),
                                         ),
-                                        onChanged: (value) async {
-                                          motorFormSqlDb.bodyType = value;
-                                          await _updateMotorForm(
-                                              motorFormSqlDb.id,
-                                              'bodyType',
-                                              motorFormSqlDb.bodyType);
-                                        },
-                                        onSaved: (value) {
-                                          motorFormSqlDb.bodyType = value;
-                                        },
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                Column(
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Trim',
-                                      ),
+                                    const SizedBox(
+                                      height: 20,
                                     ),
-                                    SizedBox(
-                                      height: 5,
-                                    ),
-                                    Container(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      height:
-                                          MediaQuery.of(context).size.height /
-                                              12,
-                                      child: TextFormField(
-                                        key: ValueKey('trim'),
-                                        initialValue:
-                                            motorFormSqlDb.trim != null
-                                                ? motorFormSqlDb.trim
-                                                : ' ',
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(),
+                                    Column(
+                                      children: [
+                                        const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: const Text(
+                                            'Transmission',
+                                          ),
                                         ),
-                                        onChanged: (value) async {
-                                          motorFormSqlDb.trim = value;
-                                          await _updateMotorForm(
-                                              motorFormSqlDb.id,
-                                              'trim',
-                                              motorFormSqlDb.trim);
-                                        },
-                                        onSaved: (value) {
-                                          motorFormSqlDb.trim = value;
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                Column(
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Transmission',
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      height: 5,
-                                    ),
-                                    Container(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      height:
-                                          MediaQuery.of(context).size.height /
-                                              15,
-                                      child: TextFormField(
-                                        key: ValueKey('transmission'),
-                                        initialValue:
-                                            motorFormSqlDb.transmission != null
+                                        const SizedBox(
+                                          height: 5,
+                                        ),
+                                        Container(
+                                          color: bScaffoldBackgroundColor,
+                                          child:
+                                              DropdownButtonFormField<String>(
+                                            items: _transmission,
+                                            decoration: const InputDecoration(
+                                              border:
+                                                  const OutlineInputBorder(),
+                                            ),
+                                            onChanged: (value) async {
+                                              setState(() {
+                                                motorFormSqlDb.transmission =
+                                                    value;
+                                              });
+                                              await _updateMotorForm(
+                                                  motorFormSqlDb.id,
+                                                  'transmission',
+                                                  motorFormSqlDb.transmission);
+                                            },
+                                            onSaved: (value) {
+                                              motorFormSqlDb.transmission =
+                                                  value;
+                                            },
+                                            validator: (value) {
+                                              if (value == 'Unspecified') {
+                                                return 'Please select Transmission!';
+                                              }
+                                              return null;
+                                            },
+                                            value: motorFormSqlDb
+                                                        .transmission !=
+                                                    null
                                                 ? motorFormSqlDb.transmission
-                                                : ' ',
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(),
-                                        ),
-                                        onChanged: (value) async {
-                                          motorFormSqlDb.transmission = value;
-                                          await _updateMotorForm(
-                                              motorFormSqlDb.id,
-                                              'transmission',
-                                              motorFormSqlDb.transmission);
-                                        },
-                                        onSaved: (value) {
-                                          motorFormSqlDb.transmission = value;
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                //
-                                Column(
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Interior Color',
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      height: 5,
-                                    ),
-                                    Container(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      height:
-                                          MediaQuery.of(context).size.height /
-                                              15,
-                                      child: TextFormField(
-                                        key: ValueKey('interiorColor'),
-                                        controller: controllerIC,
-                                        // initialValue: motorFormSqlDb.interiorColor,
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(),
-                                        ),
-                                        onChanged: (value) async {
-                                          motorFormSqlDb.interiorColor = value;
-                                          await _updateMotorForm(
-                                              motorFormSqlDb.id,
-                                              'interiorColor',
-                                              motorFormSqlDb.interiorColor);
-                                        },
-                                        validator: (value) {
-                                          if (value.isEmpty) {
-                                            return 'Please enter interiorColor!';
-                                          }
-                                          return null;
-                                        },
-                                        onSaved: (value) {
-                                          motorFormSqlDb.interiorColor = value;
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                //
-                                Column(
-                                  children: [
-                                    // Row(
-                                    //   children: [
-                                    //     Text("Interior Color: "),
-                                    //     Text(
-                                    //         motorFormSqlDb.interiorColor != null
-                                    //             ? motorFormSqlDb.interiorColor
-                                    //             : 'Select Color'),
-                                    //   ],
-                                    // ),
-                                    SizedBox(
-                                      height: 10,
-                                    ),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceAround,
-                                      children: [
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            setState(() {
-                                              motorFormSqlDb.interiorColor =
-                                                  "Red";
-                                              controllerIC.text = "Red";
-                                            });
-                                            await _updateMotorForm(
-                                                motorFormSqlDb.id,
-                                                'interiorColor',
-                                                motorFormSqlDb.interiorColor);
-                                          },
-                                          child: Text(''),
-                                          style: ElevatedButton.styleFrom(
-                                            shape: CircleBorder(
-                                              side: motorFormSqlDb
-                                                          .interiorColor ==
-                                                      "Red"
-                                                  ? BorderSide(
-                                                      width: 2,
-                                                      style: BorderStyle.solid,
-                                                    )
-                                                  : BorderSide.none,
-                                            ),
-                                            primary: Colors.red[700],
-                                          ),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            setState(() {
-                                              motorFormSqlDb.interiorColor =
-                                                  "Orange";
-                                              controllerIC.text = "Orange";
-                                            });
-                                            await _updateMotorForm(
-                                                motorFormSqlDb.id,
-                                                'interiorColor',
-                                                motorFormSqlDb.interiorColor);
-                                          },
-                                          child: Text(''),
-                                          style: ElevatedButton.styleFrom(
-                                            shape: CircleBorder(
-                                              side: motorFormSqlDb
-                                                          .interiorColor ==
-                                                      "Orange"
-                                                  ? BorderSide(
-                                                      width: 2,
-                                                      style: BorderStyle.solid,
-                                                    )
-                                                  : BorderSide.none,
-                                            ),
-                                            primary: Colors.orange[700],
-                                          ),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            setState(() {
-                                              motorFormSqlDb.interiorColor =
-                                                  "Yellow";
-                                              controllerIC.text = "Yellow";
-                                            });
-                                            await _updateMotorForm(
-                                                motorFormSqlDb.id,
-                                                'interiorColor',
-                                                motorFormSqlDb.interiorColor);
-                                          },
-                                          child: Text(''),
-                                          style: ElevatedButton.styleFrom(
-                                            shape: CircleBorder(
-                                              side: motorFormSqlDb
-                                                          .interiorColor ==
-                                                      "Yellow"
-                                                  ? BorderSide(
-                                                      width: 2,
-                                                      style: BorderStyle.solid,
-                                                    )
-                                                  : BorderSide.none,
-                                            ),
-                                            primary: Colors.yellow[700],
-                                          ),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            setState(() {
-                                              motorFormSqlDb.interiorColor =
-                                                  "Green";
-                                              controllerIC.text = "Green";
-                                            });
-                                            await _updateMotorForm(
-                                                motorFormSqlDb.id,
-                                                'interiorColor',
-                                                motorFormSqlDb.interiorColor);
-                                          },
-                                          child: Text(''),
-                                          style: ElevatedButton.styleFrom(
-                                            shape: CircleBorder(
-                                              side: motorFormSqlDb
-                                                          .interiorColor ==
-                                                      "Green"
-                                                  ? BorderSide(
-                                                      width: 2,
-                                                      style: BorderStyle.solid,
-                                                    )
-                                                  : BorderSide.none,
-                                            ),
-                                            primary: Colors.green[700],
-                                          ),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            setState(() {
-                                              motorFormSqlDb.interiorColor =
-                                                  "Blue";
-                                              controllerIC.text = "Blue";
-                                            });
-                                            await _updateMotorForm(
-                                                motorFormSqlDb.id,
-                                                'interiorColor',
-                                                motorFormSqlDb.interiorColor);
-                                          },
-                                          child: Text(''),
-                                          style: ElevatedButton.styleFrom(
-                                            shape: CircleBorder(
-                                              side: motorFormSqlDb
-                                                          .interiorColor ==
-                                                      "Blue"
-                                                  ? BorderSide(
-                                                      width: 2,
-                                                      style: BorderStyle.solid,
-                                                    )
-                                                  : BorderSide.none,
-                                            ),
-                                            primary: Colors.blue[700],
+                                                : _initialSelectedItem,
                                           ),
                                         ),
                                       ],
                                     ),
-                                    SizedBox(
-                                      height: 10,
+                                    const SizedBox(
+                                      height: 20,
                                     ),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceAround,
+                                    //
+                                    Column(
                                       children: [
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            setState(() {
-                                              motorFormSqlDb.interiorColor =
-                                                  "Purple";
-                                              controllerIC.text = "Purple";
-                                            });
-                                            await _updateMotorForm(
-                                                motorFormSqlDb.id,
-                                                'interiorColor',
-                                                motorFormSqlDb.interiorColor);
-                                          },
-                                          child: Text(''),
-                                          style: ElevatedButton.styleFrom(
-                                            shape: CircleBorder(
-                                              side: motorFormSqlDb
-                                                          .interiorColor ==
-                                                      "Purple"
-                                                  ? BorderSide(
-                                                      width: 2,
-                                                      style: BorderStyle.solid,
-                                                    )
-                                                  : BorderSide.none,
-                                            ),
-                                            primary: Colors.purple[700],
+                                        const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: const Text(
+                                            'Interior Color',
                                           ),
                                         ),
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            setState(() {
-                                              motorFormSqlDb.interiorColor =
-                                                  "Black";
-                                              controllerIC.text = "Black";
-                                            });
-                                            await _updateMotorForm(
-                                                motorFormSqlDb.id,
-                                                'interiorColor',
-                                                motorFormSqlDb.interiorColor);
-                                          },
-                                          child: Text(''),
-                                          style: ElevatedButton.styleFrom(
-                                            shape: CircleBorder(
-                                              side: motorFormSqlDb
-                                                          .interiorColor ==
-                                                      "Black"
-                                                  ? BorderSide(
-                                                      width: 2,
-                                                      style: BorderStyle.solid,
-                                                      color: Colors.grey[200],
-                                                    )
-                                                  : BorderSide.none,
-                                            ),
-                                            primary: Colors.black,
-                                          ),
+                                        const SizedBox(
+                                          height: 5,
                                         ),
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            setState(() {
-                                              motorFormSqlDb.interiorColor =
-                                                  "Grey";
-                                              controllerIC.text = "Grey";
-                                            });
-                                            await _updateMotorForm(
-                                                motorFormSqlDb.id,
-                                                'interiorColor',
-                                                motorFormSqlDb.interiorColor);
-                                          },
-                                          child: Text(''),
-                                          style: ElevatedButton.styleFrom(
-                                            shape: CircleBorder(
-                                              side: motorFormSqlDb
-                                                          .interiorColor ==
-                                                      "Grey"
-                                                  ? BorderSide(
-                                                      width: 2,
-                                                      style: BorderStyle.solid,
-                                                    )
-                                                  : BorderSide.none,
+                                        Container(
+                                          color: bScaffoldBackgroundColor,
+                                          height: MediaQuery.of(context)
+                                                  .size
+                                                  .height /
+                                              15,
+                                          child: TextFormField(
+                                            key: ValueKey('interiorColor'),
+                                            onEditingComplete: () =>
+                                                focusNode.nextFocus(),
+                                            enabled: false,
+                                            controller: controllerIC,
+                                            decoration: const InputDecoration(
+                                              border: OutlineInputBorder(),
                                             ),
-                                            primary: Colors.grey[300],
-                                          ),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            setState(() {
-                                              motorFormSqlDb.interiorColor =
-                                                  "Brown";
-                                              controllerIC.text = "Brown";
-                                            });
-                                            await _updateMotorForm(
-                                                motorFormSqlDb.id,
-                                                'interiorColor',
-                                                motorFormSqlDb.interiorColor);
-                                          },
-                                          child: Text(''),
-                                          style: ElevatedButton.styleFrom(
-                                            shape: CircleBorder(
-                                              side: motorFormSqlDb
-                                                          .interiorColor ==
-                                                      "Brown"
-                                                  ? BorderSide(
-                                                      width: 2,
-                                                      style: BorderStyle.solid,
-                                                    )
-                                                  : BorderSide.none,
-                                            ),
-                                            primary: Colors.brown[500],
-                                          ),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            setState(() {
-                                              motorFormSqlDb.interiorColor =
-                                                  "White";
-                                              controllerIC.text = "White";
-                                            });
-                                            await _updateMotorForm(
-                                                motorFormSqlDb.id,
-                                                'interiorColor',
-                                                motorFormSqlDb.interiorColor);
-                                          },
-                                          child: Text(''),
-                                          style: ElevatedButton.styleFrom(
-                                            shape: CircleBorder(
-                                              side: motorFormSqlDb
-                                                          .interiorColor ==
-                                                      "White"
-                                                  ? BorderSide(
-                                                      width: 2,
-                                                      style: BorderStyle.solid,
-                                                    )
-                                                  : BorderSide.none,
-                                            ),
-                                            primary: Colors.white,
                                           ),
                                         ),
                                       ],
                                     ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                Column(
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        'Steering Location',
-                                      ),
+                                    const SizedBox(
+                                      height: 20,
                                     ),
-                                    SizedBox(
-                                      height: 5,
-                                    ),
-                                    Container(
-                                      color: Theme.of(context)
-                                          .scaffoldBackgroundColor,
-                                      height:
-                                          MediaQuery.of(context).size.height /
-                                              15,
-                                      child: TextFormField(
-                                        key: ValueKey('steeringLocation'),
-                                        initialValue: motorFormSqlDb
-                                                    .steeringLocation !=
-                                                null
-                                            ? motorFormSqlDb.steeringLocation
-                                            : ' ',
-                                        decoration: InputDecoration(
-                                          border: OutlineInputBorder(),
+                                    //
+                                    Column(
+                                      children: [
+                                        const SizedBox(
+                                          height: 10,
                                         ),
-                                        onChanged: (value) async {
-                                          motorFormSqlDb.steeringLocation =
-                                              value;
-                                          await _updateMotorForm(
-                                              motorFormSqlDb.id,
-                                              'steeringLocation',
-                                              motorFormSqlDb.steeringLocation);
-                                        },
-                                        onSaved: (value) {
-                                          motorFormSqlDb.steeringLocation =
-                                              value;
-                                        },
-                                      ),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceAround,
+                                          children: [
+                                            ElevatedButton(
+                                              onPressed: () async {
+                                                setState(() {
+                                                  motorFormSqlDb.interiorColor =
+                                                      "Red";
+                                                  controllerIC.text = "Red";
+                                                });
+                                                await _updateMotorForm(
+                                                    motorFormSqlDb.id,
+                                                    'interiorColor',
+                                                    motorFormSqlDb
+                                                        .interiorColor);
+                                              },
+                                              child: const Text(''),
+                                              style: ElevatedButton.styleFrom(
+                                                shape: CircleBorder(
+                                                  side: motorFormSqlDb
+                                                              .interiorColor ==
+                                                          "Red"
+                                                      ? const BorderSide(
+                                                          width: 2,
+                                                          style:
+                                                              BorderStyle.solid,
+                                                        )
+                                                      : BorderSide.none,
+                                                ),
+                                                primary: Colors.red[700],
+                                              ),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () async {
+                                                setState(() {
+                                                  motorFormSqlDb.interiorColor =
+                                                      "Orange";
+                                                  controllerIC.text = "Orange";
+                                                });
+                                                await _updateMotorForm(
+                                                    motorFormSqlDb.id,
+                                                    'interiorColor',
+                                                    motorFormSqlDb
+                                                        .interiorColor);
+                                              },
+                                              child: const Text(''),
+                                              style: ElevatedButton.styleFrom(
+                                                shape: CircleBorder(
+                                                  side: motorFormSqlDb
+                                                              .interiorColor ==
+                                                          "Orange"
+                                                      ? const BorderSide(
+                                                          width: 2,
+                                                          style:
+                                                              BorderStyle.solid,
+                                                        )
+                                                      : BorderSide.none,
+                                                ),
+                                                primary: Colors.orange[700],
+                                              ),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () async {
+                                                setState(() {
+                                                  motorFormSqlDb.interiorColor =
+                                                      "Yellow";
+                                                  controllerIC.text = "Yellow";
+                                                });
+                                                await _updateMotorForm(
+                                                    motorFormSqlDb.id,
+                                                    'interiorColor',
+                                                    motorFormSqlDb
+                                                        .interiorColor);
+                                              },
+                                              child: const Text(''),
+                                              style: ElevatedButton.styleFrom(
+                                                shape: CircleBorder(
+                                                  side: motorFormSqlDb
+                                                              .interiorColor ==
+                                                          "Yellow"
+                                                      ? const BorderSide(
+                                                          width: 2,
+                                                          style:
+                                                              BorderStyle.solid,
+                                                        )
+                                                      : BorderSide.none,
+                                                ),
+                                                primary: Colors.yellow[700],
+                                              ),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () async {
+                                                setState(() {
+                                                  motorFormSqlDb.interiorColor =
+                                                      "Green";
+                                                  controllerIC.text = "Green";
+                                                });
+                                                await _updateMotorForm(
+                                                    motorFormSqlDb.id,
+                                                    'interiorColor',
+                                                    motorFormSqlDb
+                                                        .interiorColor);
+                                              },
+                                              child: const Text(''),
+                                              style: ElevatedButton.styleFrom(
+                                                shape: CircleBorder(
+                                                  side: motorFormSqlDb
+                                                              .interiorColor ==
+                                                          "Green"
+                                                      ? const BorderSide(
+                                                          width: 2,
+                                                          style:
+                                                              BorderStyle.solid,
+                                                        )
+                                                      : BorderSide.none,
+                                                ),
+                                                primary: Colors.green[700],
+                                              ),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () async {
+                                                setState(() {
+                                                  motorFormSqlDb.interiorColor =
+                                                      "Blue";
+                                                  controllerIC.text = "Blue";
+                                                });
+                                                await _updateMotorForm(
+                                                    motorFormSqlDb.id,
+                                                    'interiorColor',
+                                                    motorFormSqlDb
+                                                        .interiorColor);
+                                              },
+                                              child: const Text(''),
+                                              style: ElevatedButton.styleFrom(
+                                                shape: CircleBorder(
+                                                  side: motorFormSqlDb
+                                                              .interiorColor ==
+                                                          "Blue"
+                                                      ? const BorderSide(
+                                                          width: 2,
+                                                          style:
+                                                              BorderStyle.solid,
+                                                        )
+                                                      : BorderSide.none,
+                                                ),
+                                                primary: Colors.blue[700],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(
+                                          height: 10,
+                                        ),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceAround,
+                                          children: [
+                                            ElevatedButton(
+                                              onPressed: () async {
+                                                setState(() {
+                                                  motorFormSqlDb.interiorColor =
+                                                      "Purple";
+                                                  controllerIC.text = "Purple";
+                                                });
+                                                await _updateMotorForm(
+                                                    motorFormSqlDb.id,
+                                                    'interiorColor',
+                                                    motorFormSqlDb
+                                                        .interiorColor);
+                                              },
+                                              child: const Text(''),
+                                              style: ElevatedButton.styleFrom(
+                                                shape: CircleBorder(
+                                                  side: motorFormSqlDb
+                                                              .interiorColor ==
+                                                          "Purple"
+                                                      ? const BorderSide(
+                                                          width: 2,
+                                                          style:
+                                                              BorderStyle.solid,
+                                                        )
+                                                      : BorderSide.none,
+                                                ),
+                                                primary: Colors.purple[700],
+                                              ),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () async {
+                                                setState(() {
+                                                  motorFormSqlDb.interiorColor =
+                                                      "Black";
+                                                  controllerIC.text = "Black";
+                                                });
+                                                await _updateMotorForm(
+                                                    motorFormSqlDb.id,
+                                                    'interiorColor',
+                                                    motorFormSqlDb
+                                                        .interiorColor);
+                                              },
+                                              child: const Text(''),
+                                              style: ElevatedButton.styleFrom(
+                                                shape: CircleBorder(
+                                                  side: motorFormSqlDb
+                                                              .interiorColor ==
+                                                          "Black"
+                                                      ? BorderSide(
+                                                          width: 2,
+                                                          style:
+                                                              BorderStyle.solid,
+                                                          color:
+                                                              Colors.grey[200],
+                                                        )
+                                                      : BorderSide.none,
+                                                ),
+                                                primary: Colors.black,
+                                              ),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () async {
+                                                setState(() {
+                                                  motorFormSqlDb.interiorColor =
+                                                      "Grey";
+                                                  controllerIC.text = "Grey";
+                                                });
+                                                await _updateMotorForm(
+                                                    motorFormSqlDb.id,
+                                                    'interiorColor',
+                                                    motorFormSqlDb
+                                                        .interiorColor);
+                                              },
+                                              child: const Text(''),
+                                              style: ElevatedButton.styleFrom(
+                                                shape: CircleBorder(
+                                                  side: motorFormSqlDb
+                                                              .interiorColor ==
+                                                          "Grey"
+                                                      ? const BorderSide(
+                                                          width: 2,
+                                                          style:
+                                                              BorderStyle.solid,
+                                                        )
+                                                      : BorderSide.none,
+                                                ),
+                                                primary: Colors.grey[300],
+                                              ),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () async {
+                                                setState(() {
+                                                  motorFormSqlDb.interiorColor =
+                                                      "Brown";
+                                                  controllerIC.text = "Brown";
+                                                });
+                                                await _updateMotorForm(
+                                                    motorFormSqlDb.id,
+                                                    'interiorColor',
+                                                    motorFormSqlDb
+                                                        .interiorColor);
+                                              },
+                                              child: const Text(''),
+                                              style: ElevatedButton.styleFrom(
+                                                shape: CircleBorder(
+                                                  side: motorFormSqlDb
+                                                              .interiorColor ==
+                                                          "Brown"
+                                                      ? const BorderSide(
+                                                          width: 2,
+                                                          style:
+                                                              BorderStyle.solid,
+                                                        )
+                                                      : BorderSide.none,
+                                                ),
+                                                primary: Colors.brown[500],
+                                              ),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () async {
+                                                setState(() {
+                                                  motorFormSqlDb.interiorColor =
+                                                      "White";
+                                                  controllerIC.text = "White";
+                                                });
+                                                await _updateMotorForm(
+                                                    motorFormSqlDb.id,
+                                                    'interiorColor',
+                                                    motorFormSqlDb
+                                                        .interiorColor);
+                                              },
+                                              child: const Text(''),
+                                              style: ElevatedButton.styleFrom(
+                                                shape: CircleBorder(
+                                                  side: motorFormSqlDb
+                                                              .interiorColor ==
+                                                          "White"
+                                                      ? const BorderSide(
+                                                          width: 2,
+                                                          style:
+                                                              BorderStyle.solid,
+                                                        )
+                                                      : BorderSide.none,
+                                                ),
+                                                primary: bBackgroundColor,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(
+                                      height: 20,
+                                    ),
+                                    Column(
+                                      children: [
+                                        const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: const Text(
+                                            'Steering Location',
+                                          ),
+                                        ),
+                                        const SizedBox(
+                                          height: 5,
+                                        ),
+                                        Container(
+                                          color: bScaffoldBackgroundColor,
+                                          height: MediaQuery.of(context)
+                                                  .size
+                                                  .height /
+                                              15,
+                                          child: TextFormField(
+                                            key: ValueKey('steeringLocation'),
+                                            onEditingComplete: () =>
+                                                focusNode.nextFocus(),
+                                            initialValue: motorFormSqlDb
+                                                        .steeringLocation !=
+                                                    null
+                                                ? motorFormSqlDb
+                                                    .steeringLocation
+                                                : '',
+                                            decoration: const InputDecoration(
+                                              border:
+                                                  const OutlineInputBorder(),
+                                            ),
+                                            onChanged: (value) async {
+                                              setState(() {
+                                                motorFormSqlDb
+                                                    .steeringLocation = value;
+                                              });
+                                              await _updateMotorForm(
+                                                  motorFormSqlDb.id,
+                                                  'steeringLocation',
+                                                  motorFormSqlDb
+                                                      .steeringLocation);
+                                            },
+                                            onSaved: (value) {
+                                              motorFormSqlDb.steeringLocation =
+                                                  value;
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(
+                                      height: 20,
                                     ),
                                   ],
                                 ),
-                                SizedBox(
-                                  height: 20,
-                                ),
-                              ],
-                            ),
-                          // Column(
-                          //   children: [
-                          //     Align(
-                          //       alignment: Alignment.centerLeft,
-                          //       child: Text(
-                          //         'For Sale By',
-                          //       ),
-                          //     ),
-                          //     SizedBox(
-                          //       height: 5,
-                          //     ),
-                          //     Container(
-                          //       color:
-                          //           Theme.of(context).scaffoldBackgroundColor,
-                          //       height:
-                          //           MediaQuery.of(context).size.height / 15,
-                          //       child: TextFormField(
-                          //         key: ValueKey('forSaleBy'),
-                          //         initialValue: motorFormSqlDb.forSaleBy,
-                          //         decoration: InputDecoration(
-                          //           border: OutlineInputBorder(),
-                          //         ),
-                          //         onChanged: (value) async {
-                          //           motorFormSqlDb.forSaleBy = value;
-                          //           await _updateMotorForm(
-                          //               motorFormSqlDb.id,
-                          //               'forSaleBy',
-                          //               motorFormSqlDb.forSaleBy);
-                          //         },
-                          //         onSaved: (value) {
-                          //           motorFormSqlDb.forSaleBy = value;
-                          //         },
-                          //       ),
-                          //     ),
-                          //   ],
-                          // ),
-                          // SizedBox(
-                          //   height: 20,
-                          // ),
-                          Column(
-                            children: [
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  'Warranty',
-                                ),
-                              ),
-                              SizedBox(
-                                height: 5,
-                              ),
-                              Container(
-                                color:
-                                    Theme.of(context).scaffoldBackgroundColor,
-                                height: MediaQuery.of(context).size.height / 15,
-                                child: TextFormField(
-                                  key: ValueKey('warranty'),
-                                  initialValue: motorFormSqlDb.warranty,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
+
+                              Column(
+                                children: [
+                                  const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: const Text(
+                                      'Warranty in years',
+                                    ),
                                   ),
-                                  onChanged: (value) async {
-                                    motorFormSqlDb.warranty = value;
-                                    await _updateMotorForm(motorFormSqlDb.id,
-                                        'warranty', motorFormSqlDb.warranty);
-                                  },
-                                  onSaved: (value) {
-                                    motorFormSqlDb.warranty = value;
-                                  },
-                                ),
+                                  const SizedBox(
+                                    height: 5,
+                                  ),
+                                  Container(
+                                    color: bScaffoldBackgroundColor,
+                                    height:
+                                        MediaQuery.of(context).size.height / 15,
+                                    child: TextFormField(
+                                      key: ValueKey('warranty'),
+                                      onEditingComplete: () =>
+                                          focusNode.nextFocus(),
+                                      initialValue: motorFormSqlDb.warranty,
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      keyboardType: TextInputType.number,
+                                      onChanged: (value) async {
+                                        setState(() {
+                                          motorFormSqlDb.warranty = value;
+                                        });
+                                        await _updateMotorForm(
+                                            motorFormSqlDb.id,
+                                            'warranty',
+                                            motorFormSqlDb.warranty);
+                                      },
+                                      onSaved: (value) {
+                                        motorFormSqlDb.warranty = value;
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
+                          )
+                        : Column(
+                            children: [
+                              const Text('Please Continue Further!!'),
+                            ],
                           ),
-                        ],
-                      ),
                 ],
               ),
             ),
           ),
         ),
       ),
-      // if (motorFormSqlDb.catName.trim() != 'Car'.trim() &&
-      //     motorFormSqlDb.catName.trim() != 'Motorbike'.trim() &&
-      //     motorFormSqlDb.catName.trim() != 'Truck'.trim())
-      //   Step(
-      //     title: const Text('Spec'),
-      //     isActive: _currentStep >= 0,
-      //     state: _currentStep >= 3 ? StepState.complete : StepState.disabled,
-      //     content: Form(
-      //       key: formKeys[3],
-      //       child: Column(
-      //         children: <Widget>[
-      //           Text(
-      //               'No Additional Specification is required!! Please continue :)'),
-      //         ],
-      //       ),
-      //     ),
-      //   ),
       Step(
         title: const Text('Review'),
         isActive: _currentStep >= 0,
@@ -2105,30 +2368,7 @@ class _PostInputFormState extends State<PostInputForm>
           key: formKeys[3],
           child: Column(
             children: <Widget>[
-              // SearchMapPlaceWidget(
-              //   strictBounds: false,
-              //   // location: LatLng(11.3410, 77.7172),
-              //   // radius: 100,
-              //   hasClearButton: true,
-              //   placeType: PlaceType.address,
-              //   placeholder: 'Enter the location',
-              //   apiKey: placeApiKey,
-              //   onSelected: (Place place) async {
-              //     setState(() {
-              //       _addressLocation = '';
-              //       _latitude = 0.0;
-              //       _longitude = 0.0;
-              //     });
-              //     await getCurrentLocation.getselectedPosition(place);
-
-              //     setState(() {
-              //       _addressLocation = getCurrentLocation.addressLocation;
-              //       _latitude = getCurrentLocation.latitude;
-              //       _longitude = getCurrentLocation.longitude;
-              //     });
-              //   },
-              // ),
-              Text('Select Location'),
+              const Text('Select Location'),
               SearchPlaceAutoCompleteWidgetCustom(
                 apiKey: placeApiKey,
                 components: _countryCode,
@@ -2165,179 +2405,166 @@ class _PostInputFormState extends State<PostInputForm>
                   });
                 },
                 icon: Icon(Icons.my_location),
-                label: Text("Current location"),
+                label: const Text("Current location"),
               ),
               Text(_addressLocation),
-              if (_prodUpdated == 'Start')
-                Column(
-                  children: [
-                    SizedBox(
-                      height: 50,
-                    ),
-                    Text('Your Ad is being updated... Please wait!!'),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    CircularProgressIndicator(),
-                  ],
-                )
             ],
           ),
         ),
       ),
     ];
-    return Container(
-      color: Colors.white,
-      child: Column(
-        children: [
-          Expanded(
-            child: Stepper(
-              type: StepperType.horizontal,
-              physics: ClampingScrollPhysics(),
-              currentStep: _currentStep,
-              onStepTapped: (step) => tapped(step),
-              onStepContinue: () async {
-                setState(() {
-                  // motorFormSqlDb.editPost = widget.editPost;
-                  print('motorFormSqlDb.editPost - ${motorFormSqlDb.editPost}');
-                  if (_currentStep > 0) {
-                    if (formKeys[_currentStep].currentState.validate()) {
-                      formKeys[_currentStep].currentState.save();
-                      if (_currentStep < steps.length - 1) {
-                        _currentStep = _currentStep + 1;
-                        print('checking1');
-                      }
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Please Enter Mandatory Fields!'),
-                        ),
-                      );
-                    }
-                    print('checking2');
-                    if (_currentStep == 2) {
-                      _addressLocation = '';
-                      _latitude = 0.0;
-                      _longitude = 0.0;
-                    }
-                    print('checking3');
-                  } else if (_currentStep == 0 && _totalImageCount > 0) {
-                    _currentStep = _currentStep + 1;
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Please Select Image!')));
-                  }
-                });
-              },
-              onStepCancel: cancel,
-              steps: steps,
-              controlsBuilder: (BuildContext context,
-                  {VoidCallback onStepContinue, VoidCallback onStepCancel}) {
-                return Row(
-                  children: <Widget>[
-                    _currentStep < 3
-                        ? ElevatedButton(
-                            onPressed: onStepContinue,
-                            child: Text('Continue'),
-                          )
-                        : _addressLocation.isNotEmpty
-                            ? ElevatedButton(
-                                onPressed: () async {
-                                  print(
-                                      'is edit  Post0 - ${motorFormSqlDb.editPost}');
-                                  if (motorFormSqlDb.editPost == 'true') {
-                                    print('is edit  Post1');
-                                    _deleteProduct(widget.prodId,
-                                            motorFormSqlDb.catName)
-                                        .then((value) async {
-                                      // _updateCategoryCount(false);
-                                      setState(() {
-                                        _prodUpdated = 'Start';
-                                      });
-                                      await _postAds().then((value) async {
-                                        print('check after postad - $value');
-                                        if (value == 'Success') {
-                                          await _deleteAndProcess();
-                                        }
-                                      });
-                                    });
-                                  } else {
-                                    print('post check1');
-                                    setState(() {
-                                      _prodUpdated = 'Start';
-                                    });
 
-                                    await _postAds().then((value) async {
-                                      print('check after postad - $value');
-                                      if (value == 'Success') {
-                                        await _deleteAndProcess();
-                                      }
-                                    });
-                                  }
-                                  // // _updateCategoryCount(true);
-                                  // print('check post 1****');
-                                  // _deleteImageAll();
-                                  // print('check post 3****');
-                                  // _deleteMotorFormAll().then((value) {
-                                  //   // _showPostDialog();
-                                  //   print('check post 4****');
-                                  //   if (_prodUpdated == 'Success') {
-                                  //     print('check post 5****');
-                                  //     ScaffoldMessenger.of(context)
-                                  //         .showSnackBar(
-                                  //       SnackBar(
-                                  //         content:
-                                  //             Text('Post added successfully!'),
-                                  //       ),
-                                  //     );
-                                  //   }
-                                  //   print('check post 6****');
-                                  //   Navigator.pushReplacement(
-                                  //     context,
-                                  //     MaterialPageRoute(
-                                  //         builder: (_) {
-                                  //           return TabsScreen();
-                                  //         },
-                                  //         fullscreenDialog: true),
-                                  //   );
-                                  // });
-                                },
-                                child: Text('Post Ad'),
-                              )
-                            : ElevatedButton(
-                                onPressed: () {},
-                                child: CircularProgressIndicator(
-                                  backgroundColor: Colors.white,
-                                ),
+    return GestureDetector(
+      onTap: () {
+        focusNode.unfocus();
+      },
+      child: Container(
+        color: bBackgroundColor,
+        child: Column(
+          children: [
+            Expanded(
+              child: Stepper(
+                type: StepperType.horizontal,
+                physics: ClampingScrollPhysics(),
+                currentStep: _currentStep,
+                onStepTapped: (step) => tapped(step),
+                onStepContinue: () async {
+                  setState(() {
+                    // motorFormSqlDb.editPost = widget.editPost;
+                    bool _validate = true;
+                    if (_currentStep > 0) {
+                      if (!_searchableValidate) {
+                        _validate = false;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                const Text('Please select mandatory fields!'),
+                          ),
+                        );
+                      }
+                      if (_specialVehicle) {
+                        if (motorFormSqlDb.vehicleTypeYear == "CTA1981" &&
+                            !_vinValidateFlag) {
+                          _validate = false;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: const Text('Please validate VIN!'),
+                            ),
+                          );
+                        }
+                        if (_currentStep > 1) {
+                          if (motorFormSqlDb.exteriorColor == null) {
+                            _validate = false;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content:
+                                    const Text('Please select exterior color!'),
                               ),
-                    TextButton(
-                      onPressed: onStepCancel,
-                      child: const Text('Back'),
-                    ),
-                  ],
-                );
-              },
+                            );
+                          }
+
+                          if (_specialVehicle) {
+                            if (motorFormSqlDb.interiorColor == null) {
+                              _validate = false;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: const Text(
+                                      'Please select interior color!'),
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      }
+
+                      if (_validate) {
+                        if (formKeys[_currentStep].currentState.validate()) {
+                          formKeys[_currentStep].currentState.save();
+                          if (_currentStep < steps.length - 1) {
+                            _currentStep = _currentStep + 1;
+                          }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content:
+                                  const Text('Please Enter Mandatory Fields!'),
+                            ),
+                          );
+                        }
+                      }
+
+                      if (_currentStep == 2) {
+                        _addressLocation = '';
+                        _latitude = 0.0;
+                        _longitude = 0.0;
+                      }
+                    } else if (_currentStep == 0 && _totalImageCount > 0) {
+                      _currentStep = _currentStep + 1;
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: const Text('Please Select Image!')));
+                    }
+                  });
+                },
+                onStepCancel: cancel,
+                steps: steps,
+                controlsBuilder: (BuildContext context,
+                    {VoidCallback onStepContinue, VoidCallback onStepCancel}) {
+                  return Row(
+                    children: <Widget>[
+                      _currentStep < 3
+                          ? ElevatedButton(
+                              onPressed: onStepContinue,
+                              child: const Text('Continue'),
+                            )
+                          : _addressLocation.isNotEmpty
+                              ? ElevatedButton(
+                                  onPressed: () async {
+                                    print(
+                                        'motorFormSqlDb.editPost - ${motorFormSqlDb.editPost}');
+
+                                    await _showAddUpdatePostDialog(
+                                        motorFormSqlDb.editPost);
+                                  },
+                                  child: const Text('Post Ad'),
+                                )
+                              : ElevatedButton(
+                                  onPressed: () {},
+                                  child: const CircularProgressIndicator(
+                                    valueColor:
+                                        const AlwaysStoppedAnimation<Color>(
+                                            bScaffoldBackgroundColor),
+                                    backgroundColor: bPrimaryColor,
+                                  ),
+                                ),
+                      TextButton(
+                        onPressed: onStepCancel,
+                        child: const Text('Back'),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   // UI design Widgets
 
-  Widget motorDetailsUI() {
+  Widget motorDetailsUI(FocusScopeNode focusNode) {
     return Column(
       children: [
         if (motorFormSqlDb.catName != null)
-          if (motorFormSqlDb.catName.trim() == 'Car'.trim() ||
-              motorFormSqlDb.catName.trim() == 'Truck'.trim())
+          if (_specialVehicle)
             Column(
               children: [
-                SizedBox(
+                const SizedBox(
                   height: 8,
                 ),
-                Text('What type of vehicle are you selling?'),
+                const Text('What type of vehicle are you selling?'),
                 SizedBox(
                   height: 10,
                 ),
@@ -2357,6 +2584,7 @@ class _PostInputFormState extends State<PostInputForm>
                     setState(() {
                       motorFormSqlDb.vehicleTypeYear = value;
                     });
+
                     await _updateMotorForm(
                         motorFormSqlDb.id, 'vehicleTypeYear', value);
                     if (value == "CTA1981") {
@@ -2368,7 +2596,6 @@ class _PostInputFormState extends State<PostInputForm>
                         cTA1981 = false;
                       });
                     }
-                    print(value.toString());
                   },
                   selectedColor: Colors.blue[200],
                   unSelectedBorderColor: Colors.grey,
@@ -2376,18 +2603,19 @@ class _PostInputFormState extends State<PostInputForm>
                   elevation: 0.0,
                   enableShape: false,
                 ),
-                SizedBox(
+                const SizedBox(
                   height: 10,
                 ),
                 TextFormField(
                   key: ValueKey('vin'),
                   initialValue: motorFormSqlDb.vin,
-                  decoration: InputDecoration(
+                  onEditingComplete: () => focusNode.nextFocus(),
+                  decoration: const InputDecoration(
                       border: OutlineInputBorder(), labelText: 'VIN'),
                   onChanged: (value) async {
-                    print(value);
-                    print(value.length);
-                    motorFormSqlDb.vin = value;
+                    setState(() {
+                      motorFormSqlDb.vin = value;
+                    });
                     await _updateMotorForm(
                         motorFormSqlDb.id, 'vin', motorFormSqlDb.vin);
                     if (value.length == 17) {
@@ -2417,12 +2645,12 @@ class _PostInputFormState extends State<PostInputForm>
         SizedBox(
           height: 10,
         ),
-        if (motorFormSqlDb.vehicleTypeYear == 'CTA1981')
+        if (motorFormSqlDb.vehicleTypeYear == 'CTA1981' && _specialVehicle)
           OutlineButton(
             shape: StadiumBorder(),
             textColor: Colors.blue,
-            child: Text('Validate VIN'),
-            borderSide: BorderSide(
+            child: const Text('Validate VIN'),
+            borderSide: const BorderSide(
                 color: Colors.grey, style: BorderStyle.solid, width: 1),
             onPressed: () async {
               _vinValidateFlag = false;
@@ -2433,11 +2661,12 @@ class _PostInputFormState extends State<PostInputForm>
               });
             },
           ),
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
         !_vinValidateFlag &&
                 motorFormSqlDb.vehicleTypeYear == 'CTA1981' &&
+                _specialVehicle &&
                 motorFormSqlDb.year == null
             ? Container(
                 height: 0,
@@ -2448,28 +2677,32 @@ class _PostInputFormState extends State<PostInputForm>
                   // Year
                   Column(
                     children: [
-                      Align(
+                      const Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
+                        child: const Text(
                           'Year',
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 5,
                       ),
                       Container(
-                        color: Theme.of(context).scaffoldBackgroundColor,
+                        color: bScaffoldBackgroundColor,
                         height: MediaQuery.of(context).size.height / 15,
                         child: TextFormField(
+                          onEditingComplete: () => focusNode.nextFocus(),
+                          keyboardType: TextInputType.number,
                           key: ValueKey('year'),
                           initialValue: motorFormSqlDb.year != null
                               ? motorFormSqlDb.year
                               : '',
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                           ),
                           onChanged: (value) async {
-                            motorFormSqlDb.year = value;
+                            setState(() {
+                              motorFormSqlDb.year = value;
+                            });
                             await _updateMotorForm(
                                 motorFormSqlDb.id, 'year', motorFormSqlDb.year);
                           },
@@ -2477,8 +2710,7 @@ class _PostInputFormState extends State<PostInputForm>
                             motorFormSqlDb.year = value;
                           },
                           validator: (value) {
-                            if (motorFormSqlDb.catName.trim() !=
-                                "Motorbike".trim()) {
+                            if (_specialVehicle) {
                               if (value.isNotEmpty) {
                                 var yr = num.parse(value.trim());
                                 if ((motorFormSqlDb.vehicleTypeYear ==
@@ -2500,278 +2732,163 @@ class _PostInputFormState extends State<PostInputForm>
                             return null;
                           },
                         ),
-                        // DropdownButtonFormField<String>(
-                        //   items: _years,
-                        //   decoration: InputDecoration(
-                        //     border: OutlineInputBorder(),
-                        //   ),
-                        //   onChanged: (value) async {
-                        //     setState(() {
-                        //       motorFormSqlDb.year = value;
-                        //     });
-                        //     await _updateMotorForm(motorFormSqlDb.id,
-                        //         'year', motorFormSqlDb.year);
-                        //   },
-                        //   onSaved: (value) {
-                        //     motorFormSqlDb.year = value;
-                        //   },
-                        //   validator: (value) {
-                        //     if (value == 'Unspecified') {
-                        //       return 'Please select year!';
-                        //     }
-                        //     return null;
-                        //   },
-                        //   value: _motorFormCount > 0
-                        //       ? motorFormSqlDb.year
-                        //       : _initialSelectedItem,
-                        // ),
                       ),
                     ],
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 10,
                   ),
-                  // Make
+                  // Prod Name
                   Column(
                     children: [
-                      Align(
+                      const Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Make',
+                        child: const Text(
+                          'Title',
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 5,
                       ),
                       Container(
-                        color: Theme.of(context).scaffoldBackgroundColor,
+                        color: bScaffoldBackgroundColor,
                         height: MediaQuery.of(context).size.height / 15,
                         child: TextFormField(
-                          key: ValueKey('make'),
-                          initialValue: motorFormSqlDb.make != null
-                              ? motorFormSqlDb.make
-                              : '',
-                          decoration: InputDecoration(
+                          key: ValueKey('prodName'),
+                          // onEditingComplete: () => focusNode.unfocus(),
+                          initialValue: motorFormSqlDb.prodName,
+                          decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                           ),
                           onChanged: (value) async {
-                            motorFormSqlDb.make = value;
-                            await _updateMotorForm(
-                                motorFormSqlDb.id, 'make', motorFormSqlDb.make);
+                            setState(() {
+                              motorFormSqlDb.prodName = value;
+                            });
+                            await _updateMotorForm(motorFormSqlDb.id,
+                                'prodName', motorFormSqlDb.prodName);
                           },
                           validator: (value) {
                             if (value.isEmpty) {
-                              return 'Please enter make!';
+                              return 'Please enter title!';
                             }
                             return null;
                           },
                           onSaved: (value) {
-                            motorFormSqlDb.make = value;
+                            motorFormSqlDb.prodName = value;
                           },
                         ),
-                        // DropdownButtonFormField<String>(
-                        //   items: _makes,
-                        //   decoration: InputDecoration(
-                        //     border: OutlineInputBorder(),
-                        //   ),
-                        //   onChanged: (value) async {
-                        //     setState(() {
-                        //       motorFormSqlDb.make = value;
-                        //     });
-                        //     await _updateMotorForm(motorFormSqlDb.id,
-                        //         'make', motorFormSqlDb.make);
-                        //   },
-                        //   onSaved: (value) {
-                        //     motorFormSqlDb.make = value;
-                        //   },
-                        //   validator: (value) {
-                        //     if (value == 'Unspecified') {
-                        //       return 'Please select make!';
-                        //     }
-                        //     return null;
-                        //   },
-                        //   value: _motorFormCount > 0
-                        //       ? motorFormSqlDb.make
-                        //       : _initialSelectedItem,
-                        // ),
                       ),
                     ],
                   ),
-                  SizedBox(
+                  const SizedBox(
+                    height: 10,
+                  ),
+
+                  Column(
+                    children: [
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: const Text(
+                          'Make',
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 5,
+                      ),
+                      Container(
+                        color: bScaffoldBackgroundColor,
+                        child: SearchableDropdown.single(
+                          items: _makes,
+                          value: motorFormSqlDb.make != null
+                              ? motorFormSqlDb.make
+                              : _initialSelectedItem,
+                          hint: "Select Make",
+                          searchHint: "Select Make",
+                          onChanged: (value) async {
+                            setState(() {
+                              motorFormSqlDb.make = value;
+                            });
+                            await _updateMotorForm(
+                                motorFormSqlDb.id, 'make', motorFormSqlDb.make);
+                          },
+                          validator: (value) {
+                            if (value == 'Unspecified') {
+                              _searchableValidate = false;
+                              return 'Please select make! - $value';
+                            }
+                            _searchableValidate = true;
+                            return null;
+                          },
+                          isExpanded: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(
                     height: 10,
                   ),
                   //Model
                   Column(
                     children: [
-                      Align(
+                      const Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
+                        child: const Text(
                           'Model',
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 5,
                       ),
                       Container(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        height: MediaQuery.of(context).size.height / 15,
-                        child: TextFormField(
-                          key: ValueKey('model'),
-                          initialValue: motorFormSqlDb.model != null
+                        color: bScaffoldBackgroundColor,
+                        child: SearchableDropdown.single(
+                          items: _models,
+                          value: motorFormSqlDb.model != null
                               ? motorFormSqlDb.model
-                              : '',
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(),
-                          ),
+                              : _initialSelectedItem,
+                          hint: "Select Model",
+                          searchHint: "Select Model",
                           onChanged: (value) async {
-                            motorFormSqlDb.model = value;
+                            setState(() {
+                              motorFormSqlDb.model = value;
+                            });
                             await _updateMotorForm(motorFormSqlDb.id, 'model',
                                 motorFormSqlDb.model);
                           },
                           validator: (value) {
-                            if (value.isEmpty) {
-                              return 'Please enter model!';
+                            if (value == 'Unspecified') {
+                              _searchableValidate = false;
+                              return 'Please select model!';
                             }
+                            _searchableValidate = true;
                             return null;
                           },
-                          onSaved: (value) {
-                            motorFormSqlDb.model = value;
-                          },
+                          isExpanded: true,
                         ),
-                        // DropdownButtonFormField<String>(
-                        //   items: _models,
-                        //   decoration: InputDecoration(
-                        //     border: OutlineInputBorder(),
-                        //   ),
-                        //   onChanged: (value) async {
-                        //     setState(() {
-                        //       motorFormSqlDb.model = value;
-                        //     });
-                        //     await _updateMotorForm(motorFormSqlDb.id,
-                        //         'model', motorFormSqlDb.model);
-                        //   },
-                        //   onSaved: (value) {
-                        //     motorFormSqlDb.model = value;
-                        //   },
-                        //   validator: (value) {
-                        //     if (value == 'Unspecified') {
-                        //       return 'Please select model!';
-                        //     }
-                        //     return null;
-                        //   },
-                        //   value: _motorFormCount > 0
-                        //       ? motorFormSqlDb.model
-                        //       : _initialSelectedItem,
-                        // ),
                       ),
                     ],
                   ),
 
-                  // TypeAheadFormField<Model>(
-                  //   initialValue: motorFormSqlDb.model.isNotEmpty
-                  //       ? motorFormSqlDb.model
-                  //       : _initialSelectedItem,
-                  //   textFieldConfiguration: TextFieldConfiguration(
-                  //       decoration:
-                  //           InputDecoration(labelText: 'Model'),
-                  //       focusNode: _focusNode),
-                  //   onSuggestionSelected:
-                  //       (Model modelSuggestion) async {
-                  //     setState(() {
-                  //       motorFormSqlDb.model = modelSuggestion.model;
-                  //       this._typeAheadControllerModel.text =
-                  //           motorFormSqlDb.model;
-                  //     });
-
-                  //     await _updateMotorForm(motorFormSqlDb.id,
-                  //         'model', motorFormSqlDb.model);
-                  //   },
-                  //   validator: (value) {
-                  //     if (value == 'Unspecified') {
-                  //       return 'Please select model!';
-                  //     }
-                  //     return null;
-                  //   },
-                  //   itemBuilder: (context, Model modelSuggestion) {
-                  //     final model = modelSuggestion;
-                  //     return Container(
-                  //       height: 600,
-                  //       child: ListTile(
-                  //         title: Text(model.model),
-                  //       ),
-                  //     );
-                  //   },
-                  //   suggestionsCallback: getModelSuggestions,
-                  //   transitionBuilder: (context, suggestionsBox,
-                  //           animationController) =>
-                  //       FadeTransition(
-                  //     child: suggestionsBox,
-                  //     opacity: CurvedAnimation(
-                  //         parent: animationController,
-                  //         curve: Curves.fastOutSlowIn),
-                  //   ),
-                  // ),
-
-                  // TextFormField(
-                  //   key: ValueKey('make'),
-                  //   initialValue: motorFormSqlDb.make,
-                  //   decoration: InputDecoration(labelText: 'Make'),
-                  //   onChanged: (value) async {
-                  //     motorFormSqlDb.make = value;
-                  //     await _updateMotorForm(motorFormSqlDb.id,
-                  //         'make', motorFormSqlDb.make);
-                  //   },
-                  //   validator: (value) {
-                  //     if (value.isEmpty) {
-                  //       return 'Please enter Make';
-                  //     }
-                  //     return null;
-                  //   },
-                  //   onSaved: (value) {
-                  //     motorFormSqlDb.make = value;
-                  //   },
-                  // ),
-                  // TextFormField(
-                  //   key: ValueKey('model'),
-                  //   initialValue: motorFormSqlDb.model,
-                  //   decoration: InputDecoration(labelText: 'Model'),
-                  //   onChanged: (value) async {
-                  //     motorFormSqlDb.model = value;
-                  //     await _updateMotorForm(motorFormSqlDb.id,
-                  //         'model', motorFormSqlDb.model);
-                  //   },
-                  //   validator: (value) {
-                  //     if (value.isEmpty) {
-                  //       return 'Please enter Model';
-                  //     }
-                  //     return null;
-                  //   },
-                  //   onSaved: (value) {
-                  //     motorFormSqlDb.model = value;
-                  //   },
-                  // ),
-                  SizedBox(
+                  const SizedBox(
                     height: 10,
                   ),
                   // Product Condition
                   Column(
                     children: [
-                      Align(
+                      const Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
+                        child: const Text(
                           'Product Condition',
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 5,
                       ),
                       Container(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        // height:
-                        //     MediaQuery.of(context).size.height / 15,
+                        color: bScaffoldBackgroundColor,
                         child: DropdownButtonFormField<String>(
                           items: _prodConditions,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                           ),
                           onChanged: (value) async {
@@ -2797,7 +2914,7 @@ class _PostInputFormState extends State<PostInputForm>
                       ),
                     ],
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 20,
                   ),
                   Column(
@@ -2808,21 +2925,24 @@ class _PostInputFormState extends State<PostInputForm>
                           'Price $_currencySymbol',
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 5,
                       ),
                       Container(
-                        color: Theme.of(context).scaffoldBackgroundColor,
+                        color: bScaffoldBackgroundColor,
                         height: MediaQuery.of(context).size.height / 15,
                         child: TextFormField(
                           key: ValueKey('price'),
+                          onEditingComplete: () => focusNode.nextFocus(),
                           initialValue: motorFormSqlDb.price,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.number,
                           onChanged: (value) async {
-                            motorFormSqlDb.price = value;
+                            setState(() {
+                              motorFormSqlDb.price = value;
+                            });
                             await _updateMotorForm(motorFormSqlDb.id, 'price',
                                 motorFormSqlDb.price);
                           },
@@ -2839,31 +2959,34 @@ class _PostInputFormState extends State<PostInputForm>
                       ),
                     ],
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 20,
                   ),
                   Column(
                     children: [
-                      Align(
+                      const Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
+                        child: const Text(
                           'Description',
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 5,
                       ),
                       Container(
-                        color: Theme.of(context).scaffoldBackgroundColor,
+                        color: bScaffoldBackgroundColor,
                         child: TextFormField(
                           maxLines: 5,
                           key: ValueKey('prodDes'),
+                          onEditingComplete: () => focusNode.nextFocus(),
                           initialValue: motorFormSqlDb.prodDes,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                           ),
                           onChanged: (value) async {
-                            motorFormSqlDb.prodDes = value;
+                            setState(() {
+                              motorFormSqlDb.prodDes = value;
+                            });
                             await _updateMotorForm(motorFormSqlDb.id, 'prodDes',
                                 motorFormSqlDb.prodDes);
                           },
@@ -2880,30 +3003,33 @@ class _PostInputFormState extends State<PostInputForm>
                       ),
                     ],
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 20,
                   ),
                   Column(
                     children: [
-                      Align(
+                      const Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
+                        child: const Text(
                           'Seller Notes',
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 5,
                       ),
                       Container(
-                        color: Theme.of(context).scaffoldBackgroundColor,
+                        color: bScaffoldBackgroundColor,
                         child: TextFormField(
                           maxLines: 5,
                           key: ValueKey('sellerNotes'),
+                          onEditingComplete: () => focusNode.nextFocus(),
                           initialValue: motorFormSqlDb.sellerNotes,
-                          decoration:
-                              InputDecoration(border: OutlineInputBorder()),
+                          decoration: const InputDecoration(
+                              border: OutlineInputBorder()),
                           onChanged: (value) async {
-                            motorFormSqlDb.sellerNotes = value;
+                            setState(() {
+                              motorFormSqlDb.sellerNotes = value;
+                            });
                             await _updateMotorForm(motorFormSqlDb.id,
                                 'sellerNotes', motorFormSqlDb.sellerNotes);
                           },
@@ -2920,46 +3046,25 @@ class _PostInputFormState extends State<PostInputForm>
                       ),
                     ],
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 20,
                   ),
                   Column(
                     children: [
-                      Align(
+                      const Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
+                        child: const Text(
                           'Delivery Info',
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 5,
                       ),
-                      // Container(
-                      //   color: Theme.of(context).scaffoldBackgroundColor,
-                      //   height: MediaQuery.of(context).size.height / 15,
-                      //   child: TextFormField(
-                      //     key: ValueKey('deliveryInfo'),
-                      //     initialValue: motorFormSqlDb.deliveryInfo,
-                      //     decoration: InputDecoration(
-                      //       border: OutlineInputBorder(),
-                      //     ),
-                      //     onChanged: (value) async {
-                      //       motorFormSqlDb.deliveryInfo = value;
-                      //       await _updateMotorForm(motorFormSqlDb.id,
-                      //           'deliveryInfo', motorFormSqlDb.deliveryInfo);
-                      //     },
-                      //     onSaved: (value) {
-                      //       motorFormSqlDb.deliveryInfo = value;
-                      //     },
-                      //   ),
-                      // ),
                       Container(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        // height:
-                        //     MediaQuery.of(context).size.height / 15,
+                        color: bScaffoldBackgroundColor,
                         child: DropdownButtonFormField<String>(
                           items: _deliveryInfo,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                           ),
                           onChanged: (value) async {
@@ -2985,46 +3090,69 @@ class _PostInputFormState extends State<PostInputForm>
                       ),
                     ],
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 20,
                   ),
                   Column(
                     children: [
-                      Align(
+                      const Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
-                          'For Sale By',
+                        child: const Text(
+                          'Type of Ad',
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 5,
                       ),
-                      // Container(
-                      //   color: Theme.of(context).scaffoldBackgroundColor,
-                      //   height: MediaQuery.of(context).size.height / 15,
-                      //   child: TextFormField(
-                      //     key: ValueKey('forSaleBy'),
-                      //     initialValue: motorFormSqlDb.forSaleBy,
-                      //     decoration: InputDecoration(
-                      //       border: OutlineInputBorder(),
-                      //     ),
-                      //     onChanged: (value) async {
-                      //       motorFormSqlDb.forSaleBy = value;
-                      //       await _updateMotorForm(motorFormSqlDb.id,
-                      //           'forSaleBy', motorFormSqlDb.forSaleBy);
-                      //     },
-                      //     onSaved: (value) {
-                      //       motorFormSqlDb.forSaleBy = value;
-                      //     },
-                      //   ),
-                      // ),
                       Container(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        // height:
-                        //     MediaQuery.of(context).size.height / 15,
+                        color: bScaffoldBackgroundColor,
+                        child: DropdownButtonFormField<String>(
+                          items: _typeOfAd,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (value) async {
+                            setState(() {
+                              motorFormSqlDb.typeOfAd = value;
+                            });
+                            await _updateMotorForm(motorFormSqlDb.id,
+                                'typeOfAd', motorFormSqlDb.typeOfAd);
+                          },
+                          onSaved: (value) {
+                            motorFormSqlDb.typeOfAd = value;
+                          },
+                          validator: (value) {
+                            if (value == 'Unspecified') {
+                              return 'Please select Type of ad!';
+                            }
+                            return null;
+                          },
+                          value: motorFormSqlDb.typeOfAd != null
+                              ? motorFormSqlDb.typeOfAd
+                              : _initialSelectedItem,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  Column(
+                    children: [
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: const Text(
+                          'Posted By',
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 5,
+                      ),
+                      Container(
+                        color: bScaffoldBackgroundColor,
                         child: DropdownButtonFormField<String>(
                           items: _forSaleBy,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                           ),
                           onChanged: (value) async {
@@ -3056,35 +3184,38 @@ class _PostInputFormState extends State<PostInputForm>
     );
   }
 
-  Widget commonDetailsUI() {
+  Widget commonDetailsUI(FocusScopeNode focusNode) {
     return Column(
       children: [
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
         Column(
           children: [
-            Align(
+            const Align(
               alignment: Alignment.centerLeft,
-              child: Text(
+              child: const Text(
                 'Year',
               ),
             ),
-            SizedBox(
+            const SizedBox(
               height: 5,
             ),
             Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
+              color: bScaffoldBackgroundColor,
               height: MediaQuery.of(context).size.height / 15,
               child: TextFormField(
                 key: ValueKey('year'),
+                onEditingComplete: () => focusNode.nextFocus(),
                 initialValue:
                     motorFormSqlDb.year != null ? motorFormSqlDb.year : '',
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                 ),
                 onChanged: (value) async {
-                  motorFormSqlDb.year = value;
+                  setState(() {
+                    motorFormSqlDb.year = value;
+                  });
                   await _updateMotorForm(
                       motorFormSqlDb.id, 'year', motorFormSqlDb.year);
                 },
@@ -3101,113 +3232,168 @@ class _PostInputFormState extends State<PostInputForm>
             ),
           ],
         ),
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
-        // Make
+        // Prod Name
         Column(
           children: [
-            Align(
+            const Align(
               alignment: Alignment.centerLeft,
-              child: Text(
-                'Make',
+              child: const Text(
+                'Title',
               ),
             ),
-            SizedBox(
+            const SizedBox(
               height: 5,
             ),
             Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
+              color: bScaffoldBackgroundColor,
               height: MediaQuery.of(context).size.height / 15,
               child: TextFormField(
-                key: ValueKey('make'),
-                initialValue:
-                    motorFormSqlDb.make != null ? motorFormSqlDb.make : '',
-                decoration: InputDecoration(
+                key: ValueKey('prodName'),
+                onEditingComplete: () => focusNode.nextFocus(),
+                initialValue: motorFormSqlDb.prodName,
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                 ),
                 onChanged: (value) async {
-                  motorFormSqlDb.make = value;
+                  setState(() {
+                    motorFormSqlDb.prodName = value;
+                  });
                   await _updateMotorForm(
-                      motorFormSqlDb.id, 'make', motorFormSqlDb.make);
+                      motorFormSqlDb.id, 'prodName', motorFormSqlDb.prodName);
                 },
                 validator: (value) {
                   if (value.isEmpty) {
-                    return 'Please enter make!';
+                    return 'Please enter title!';
                   }
                   return null;
                 },
                 onSaved: (value) {
-                  motorFormSqlDb.make = value;
-                },
-              ),
-            ),
-          ],
-        ),
-        SizedBox(
-          height: 10,
-        ),
-
-        Column(
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Model',
-              ),
-            ),
-            SizedBox(
-              height: 5,
-            ),
-            Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              height: MediaQuery.of(context).size.height / 15,
-              child: TextFormField(
-                key: ValueKey('model'),
-                initialValue:
-                    motorFormSqlDb.model != null ? motorFormSqlDb.model : '',
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) async {
-                  motorFormSqlDb.model = value;
-                  await _updateMotorForm(
-                      motorFormSqlDb.id, 'model', motorFormSqlDb.model);
-                },
-                validator: (value) {
-                  if (value.isEmpty) {
-                    return 'Please enter model!';
-                  }
-                  return null;
-                },
-                onSaved: (value) {
-                  motorFormSqlDb.model = value;
+                  motorFormSqlDb.prodName = value;
                 },
               ),
             ),
           ],
         ),
 
-        SizedBox(
+        const SizedBox(
           height: 10,
         ),
+        if (motorFormSqlDb.catName.trim() == 'Vehicle' ||
+            motorFormSqlDb.catName.trim() == 'Electronics' ||
+            motorFormSqlDb.catName.trim() == 'Home Appliances')
+          Column(
+            children: [
+              // Make
+              Column(
+                children: [
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: const Text(
+                      'Make',
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 5,
+                  ),
+                  Container(
+                    color: bScaffoldBackgroundColor,
+                    child: SearchableDropdown.single(
+                      items: _makes,
+                      value: motorFormSqlDb.make != null
+                          ? motorFormSqlDb.make
+                          : _initialSelectedItem,
+                      hint: "Select Make",
+                      searchHint: "Select Make",
+                      onChanged: (value) async {
+                        setState(() {
+                          motorFormSqlDb.make = value;
+                        });
+                        await _updateMotorForm(
+                            motorFormSqlDb.id, 'make', motorFormSqlDb.make);
+                      },
+                      validator: (value) {
+                        if (value == 'Unspecified') {
+                          _searchableValidate = false;
+                          return 'Please select make!';
+                        }
+                        _searchableValidate = true;
+                        return null;
+                      },
+                      isExpanded: true,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(
+                height: 10,
+              ),
+
+              Column(
+                children: [
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: const Text(
+                      'Model',
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 5,
+                  ),
+                  Container(
+                    color: bScaffoldBackgroundColor,
+                    child: SearchableDropdown.single(
+                      items: _models,
+                      value: motorFormSqlDb.model != null
+                          ? motorFormSqlDb.model
+                          : _initialSelectedItem,
+                      hint: "Select Model",
+                      searchHint: "Select Model",
+                      onChanged: (value) async {
+                        setState(() {
+                          motorFormSqlDb.model = value;
+                        });
+                        await _updateMotorForm(
+                            motorFormSqlDb.id, 'model', motorFormSqlDb.model);
+                      },
+                      validator: (value) {
+                        if (value == 'Unspecified') {
+                          _searchableValidate = false;
+                          return 'Please select model!';
+                        }
+                        _searchableValidate = true;
+                        return null;
+                      },
+                      isExpanded: true,
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                ],
+              ),
+            ],
+          ),
+
         // Product Condition
         Column(
           children: [
-            Align(
+            const Align(
               alignment: Alignment.centerLeft,
-              child: Text(
+              child: const Text(
                 'Product Condition',
               ),
             ),
-            SizedBox(
+            const SizedBox(
               height: 5,
             ),
             Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
+              color: bScaffoldBackgroundColor,
               child: DropdownButtonFormField<String>(
                 items: _prodConditions,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                 ),
                 onChanged: (value) async {
@@ -3233,7 +3419,7 @@ class _PostInputFormState extends State<PostInputForm>
             ),
           ],
         ),
-        SizedBox(
+        const SizedBox(
           height: 20,
         ),
         Column(
@@ -3244,21 +3430,24 @@ class _PostInputFormState extends State<PostInputForm>
                 'Price $_currencySymbol',
               ),
             ),
-            SizedBox(
+            const SizedBox(
               height: 5,
             ),
             Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
+              color: bScaffoldBackgroundColor,
               height: MediaQuery.of(context).size.height / 15,
               child: TextFormField(
                 key: ValueKey('price'),
+                onEditingComplete: () => focusNode.nextFocus(),
                 initialValue: motorFormSqlDb.price,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
                 onChanged: (value) async {
-                  motorFormSqlDb.price = value;
+                  setState(() {
+                    motorFormSqlDb.price = value;
+                  });
                   await _updateMotorForm(
                       motorFormSqlDb.id, 'price', motorFormSqlDb.price);
                 },
@@ -3275,31 +3464,34 @@ class _PostInputFormState extends State<PostInputForm>
             ),
           ],
         ),
-        SizedBox(
+        const SizedBox(
           height: 20,
         ),
         Column(
           children: [
-            Align(
+            const Align(
               alignment: Alignment.centerLeft,
-              child: Text(
+              child: const Text(
                 'Description',
               ),
             ),
-            SizedBox(
+            const SizedBox(
               height: 5,
             ),
             Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
+              color: bScaffoldBackgroundColor,
               child: TextFormField(
                 maxLines: 5,
                 key: ValueKey('prodDes'),
+                onEditingComplete: () => focusNode.nextFocus(),
                 initialValue: motorFormSqlDb.prodDes,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                 ),
                 onChanged: (value) async {
-                  motorFormSqlDb.prodDes = value;
+                  setState(() {
+                    motorFormSqlDb.prodDes = value;
+                  });
                   await _updateMotorForm(
                       motorFormSqlDb.id, 'prodDes', motorFormSqlDb.prodDes);
                 },
@@ -3316,29 +3508,32 @@ class _PostInputFormState extends State<PostInputForm>
             ),
           ],
         ),
-        SizedBox(
+        const SizedBox(
           height: 20,
         ),
         Column(
           children: [
-            Align(
+            const Align(
               alignment: Alignment.centerLeft,
-              child: Text(
+              child: const Text(
                 'Seller Notes',
               ),
             ),
-            SizedBox(
+            const SizedBox(
               height: 5,
             ),
             Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
+              color: bScaffoldBackgroundColor,
               child: TextFormField(
                 maxLines: 5,
                 key: ValueKey('sellerNotes'),
+                onEditingComplete: () => focusNode.nextFocus(),
                 initialValue: motorFormSqlDb.sellerNotes,
-                decoration: InputDecoration(border: OutlineInputBorder()),
+                decoration: const InputDecoration(border: OutlineInputBorder()),
                 onChanged: (value) async {
-                  motorFormSqlDb.sellerNotes = value;
+                  setState(() {
+                    motorFormSqlDb.sellerNotes = value;
+                  });
                   await _updateMotorForm(motorFormSqlDb.id, 'sellerNotes',
                       motorFormSqlDb.sellerNotes);
                 },
@@ -3355,47 +3550,25 @@ class _PostInputFormState extends State<PostInputForm>
             ),
           ],
         ),
-        SizedBox(
+        const SizedBox(
           height: 20,
         ),
         Column(
           children: [
-            Align(
+            const Align(
               alignment: Alignment.centerLeft,
-              child: Text(
+              child: const Text(
                 'Delivery Info',
               ),
             ),
-            SizedBox(
+            const SizedBox(
               height: 5,
             ),
-            // Container(
-            //   color: Theme.of(context).scaffoldBackgroundColor,
-            //   height: MediaQuery.of(context).size.height / 15,
-            //   child: TextFormField(
-            //     key: ValueKey('deliveryInfo'),
-            //     initialValue: motorFormSqlDb.deliveryInfo,
-            //     decoration: InputDecoration(
-            //       border: OutlineInputBorder(),
-            //     ),
-            //     onChanged: (value) async {
-            //       motorFormSqlDb.deliveryInfo = value;
-            //       await _updateMotorForm(motorFormSqlDb.id, 'deliveryInfo',
-            //           motorFormSqlDb.deliveryInfo);
-            //     },
-            //     onSaved: (value) {
-            //       motorFormSqlDb.deliveryInfo = value;
-            //     },
-            //   ),
-            // ),
-
             Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              // height:
-              //     MediaQuery.of(context).size.height / 15,
+              color: bScaffoldBackgroundColor,
               child: DropdownButtonFormField<String>(
                 items: _deliveryInfo,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                 ),
                 onChanged: (value) async {
@@ -3421,47 +3594,69 @@ class _PostInputFormState extends State<PostInputForm>
             ),
           ],
         ),
-        SizedBox(
+        const SizedBox(
           height: 20,
         ),
         Column(
           children: [
-            Align(
+            const Align(
               alignment: Alignment.centerLeft,
-              child: Text(
-                'For Sale By',
+              child: const Text(
+                'Type of Ad',
               ),
             ),
-            SizedBox(
+            const SizedBox(
               height: 5,
             ),
-            // Container(
-            //   color: Theme.of(context).scaffoldBackgroundColor,
-            //   height: MediaQuery.of(context).size.height / 15,
-            //   child: TextFormField(
-            //     key: ValueKey('forSaleBy'),
-            //     initialValue: motorFormSqlDb.forSaleBy,
-            //     decoration: InputDecoration(
-            //       border: OutlineInputBorder(),
-            //     ),
-            //     onChanged: (value) async {
-            //       motorFormSqlDb.forSaleBy = value;
-            //       await _updateMotorForm(
-            //           motorFormSqlDb.id, 'forSaleBy', motorFormSqlDb.forSaleBy);
-            //     },
-            //     onSaved: (value) {
-            //       motorFormSqlDb.forSaleBy = value;
-            //     },
-            //   ),
-            // ),
-
             Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              // height:
-              //     MediaQuery.of(context).size.height / 15,
+              color: bScaffoldBackgroundColor,
+              child: DropdownButtonFormField<String>(
+                items: _typeOfAd,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) async {
+                  setState(() {
+                    motorFormSqlDb.typeOfAd = value;
+                  });
+                  await _updateMotorForm(
+                      motorFormSqlDb.id, 'typeOfAd', motorFormSqlDb.typeOfAd);
+                },
+                onSaved: (value) {
+                  motorFormSqlDb.typeOfAd = value;
+                },
+                validator: (value) {
+                  if (value == 'Unspecified') {
+                    return 'Please select Type of Ad!';
+                  }
+                  return null;
+                },
+                value: motorFormSqlDb.typeOfAd != null
+                    ? motorFormSqlDb.typeOfAd
+                    : _initialSelectedItem,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(
+          height: 20,
+        ),
+        Column(
+          children: [
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: const Text(
+                'Posted By',
+              ),
+            ),
+            const SizedBox(
+              height: 5,
+            ),
+            Container(
+              color: bScaffoldBackgroundColor,
               child: DropdownButtonFormField<String>(
                 items: _forSaleBy,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                 ),
                 onChanged: (value) async {
@@ -3497,10 +3692,9 @@ class _PostInputFormState extends State<PostInputForm>
     setState(() => _currentStep = step);
   }
 
-  continued() {
-    print('_currentStep - $_currentStep');
-    _currentStep < 3 ? setState(() => _currentStep += 1) : null;
-  }
+  // continued() {
+  //   _currentStep < 3 ? setState(() => _currentStep += 1) : null;
+  // }
 
   cancel() {
     _currentStep > 0 ? setState(() => _currentStep -= 1) : null;
@@ -3516,8 +3710,13 @@ class _PostInputFormState extends State<PostInputForm>
     if (imageFile == null) {
       return null;
     }
+
+    pickedImage = File(imageFile.path);
+    pickedImageCompressed = await compressFile(pickedImage);
+
     setState(() {
-      pickedImage = File(imageFile.path);
+      // pickedImage = File(imageFile.path);
+      pickedImage = pickedImageCompressed;
     });
 
     if (pickedImage != null) {
@@ -3525,8 +3724,24 @@ class _PostInputFormState extends State<PostInputForm>
     }
   }
 
+  Future<File> compressFile(File file) async {
+    ImageProperties properties =
+        await FlutterNativeImage.getImageProperties(file.path);
+
+    if (properties.width > 600 && properties.height > 600) {
+      File compressedFile = await FlutterNativeImage.compressImage(
+        file.path,
+        targetHeight: 600,
+        targetWidth: 600,
+        // quality: 100,
+      );
+      return compressedFile;
+    } else {
+      return file;
+    }
+  }
+
   Future runModelOnImage() async {
-    print('check run model');
     var output = await Tflite.runModelOnImage(
       path: pickedImage.path,
       imageMean: 127.5,
@@ -3535,17 +3750,27 @@ class _PostInputFormState extends State<PostInputForm>
       threshold: 0.8,
     );
 
-    print('output length - ${output.length}');
     if (output.length > 0) {
       setState(() {
         imageLabel = output[0]["label"];
-        motorFormSqlDb.catName = imageLabel.split(" ")[1];
-        motorFormSqlDb.make = imageLabel.split(" ")[2];
-        motorFormSqlDb.model = imageLabel.split(" ")[3];
-        imageType = imageLabel.split(" ")[4];
+
+        motorFormSqlDb.catName = imageLabel.split(",")[0];
+
+        motorFormSqlDb.subCatType = imageLabel.split(",")[1];
+        motorFormSqlDb.make = imageLabel.split(",")[2] == "NA"
+            ? "Others"
+            : imageLabel.split(",")[2];
+        motorFormSqlDb.model = imageLabel.split(",")[3] == "NA"
+            ? "Others"
+            : imageLabel.split(",")[3];
+        imageType = imageLabel.split(",")[4];
       });
     } else {
       imageLabel = 'Unspecified';
+      motorFormSqlDb.catName = "Unspecified";
+      motorFormSqlDb.subCatType = "Unspecified";
+      motorFormSqlDb.make = "Others";
+      motorFormSqlDb.model = "Others";
       imageType = 'E';
     }
     if (imageLabel.isNotEmpty) {
@@ -3563,27 +3788,13 @@ class _PostInputFormState extends State<PostInputForm>
       prodImageSqlDb.featuredImage = 'false';
     }
 
-    if (motorFormSqlDb.catName != 'Car' &&
-        motorFormSqlDb.catName != 'Truck' &&
-        motorFormSqlDb.catName != 'Home') {
+    if (motorFormSqlDb.catName != 'Vehicle') {
       imageType = 'E';
     }
 
     prodImageSqlDb.imageType = imageType.substring(0, 1).toUpperCase();
 
     prodImageSqlDb.imageUrl = pickedImage.path;
-
-    // if (imageType.trim().toLowerCase() == 'exterior') {
-    //   // prodImagesSqlDbE.add(prodImageSqlDb);
-    //   setState(() {
-    //     _eImageCount = _eImageCount + 1;
-    //   });
-    // } else if (imageType.trim().toLowerCase() == 'interior') {
-    //   // prodImagesSqlDbI.add(prodImageSqlDb);
-    //   setState(() {
-    //     _iImageCount = _iImageCount + 1;
-    //   });
-    // }
 
     _saveImage(prodImageSqlDb).then((value) {
       _showDialogImages();
@@ -3595,7 +3806,7 @@ class _PostInputFormState extends State<PostInputForm>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text("Organizing your images"),
+          title: const Text("Organizing your images"),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
@@ -3611,18 +3822,23 @@ class _PostInputFormState extends State<PostInputForm>
           actions: <Widget>[
             TextButton(
               child: Center(
-                child: Text('View Images'),
+                child: const Text('View Images'),
               ),
               onPressed: () async {
                 await _initialLoadMotorForm();
                 if (_motorFormCount == 0) {
                   // Initial vehicle Type Year
-                  if (motorFormSqlDb.catName == 'Car' ||
-                      motorFormSqlDb.catName == 'Truck') {
+                  _specialVehicle = false;
+                  if (motorFormSqlDb.subCatType == 'Cars' ||
+                      motorFormSqlDb.subCatType == 'Trucks' ||
+                      motorFormSqlDb.subCatType == 'Caravans') {
+                    _specialVehicle = true;
                     motorFormSqlDb.vehicleTypeYear = "CTA1981";
                   }
 
-                  motorFormSqlDb.editPost = 'false';
+                  print('edit post _specialVehicle - $_specialVehicle');
+
+                  // motorFormSqlDb.editPost = 'false';
                   await _saveMotorForm(motorFormSqlDb);
                 }
                 setState(() {
@@ -3636,97 +3852,12 @@ class _PostInputFormState extends State<PostInputForm>
     );
   }
 
-  void _showPostDialog() {
-    String _updating = 'Start';
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Posted your add"),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                Center(
-                  child: _updating == 'Start'
-                      ? TextButton(
-                          onPressed: () async {
-                            setState(() {
-                              _updating = 'Updating';
-                            });
-                            await _postAds().then((value) async {
-                              print('check after postad - $value');
-                              if (value == 'Success') {
-                                await _deleteAndProcess();
-                                setState(() {
-                                  _updating = 'Updated';
-                                });
-                              }
-                            });
-                          },
-                          child: Text('Do you want to continue ?'),
-                        )
-                      : _updating == 'Updating'
-                          ? Text('Your ad is beeing posted....')
-                          : Text('Your ad posted Successfully!'),
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Center(
-                child: Text('Ok'),
-              ),
-              onPressed: () {
-                if (motorFormSqlDb.editPost == 'true') {
-                  // Navigator.of(context).pop();
-                  // Navigator.of(context).pushReplacement(
-                  //   MaterialPageRoute(
-                  //     builder: (BuildContext context) =>
-                  //         DisplayProductCatalog(),
-                  //   ),
-
-                  // );
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) {
-                          return DisplayProductCatalog();
-                        },
-                        fullscreenDialog: true),
-                  );
-                } else {
-                  // Navigator.pushReplacement(context,
-                  //     MaterialPageRoute(builder: (context) => TabsScreen()));
-
-                  // Navigator.pushReplacement(context,
-                  //     MaterialPageRoute(builder: (context) => TabsScreen()));
-                  Navigator.of(context).pop();
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future _validateVIN(String inVIN) async {
     var vin = VINC(number: inVIN, extended: true);
 
-    // print('WMI: ${vin.wmi}');
-    // print('VDS: ${vin.vds}');
-    // print('VIS: ${vin.vis}');
-
-    // print("Model year is " + vin.modelYear());
-    // print("Serial number is " + vin.serialNumber());
-    // print("Assembly plant is " + vin.assemblyPlant());
-    // print("Manufacturer is " + vin.getManufacturer());
-    // print("Year is " + vin.getYear().toString());
-
     var year = vin.getYear().toString();
     if (year != null) {
-      print("Year is ${year}");
+      print("Year is $year");
       setState(() {
         motorFormSqlDb.year = year;
       });
@@ -3737,7 +3868,7 @@ class _PostInputFormState extends State<PostInputForm>
 
     // The following calls are to the NHTSA DB, and are carried out asynchronously
     var make = await vin.getMakeAsync();
-    print("Make is ${make}");
+    print("Make is $make");
     if (make != null) {
       setState(() {
         motorFormSqlDb.make = make;
@@ -3746,7 +3877,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var model = await vin.getModelAsync();
-    print("Model is ${model}");
+    print("Model is $model");
     if (model != null) {
       setState(() {
         motorFormSqlDb.model = model;
@@ -3755,7 +3886,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var vehicleType = await vin.getVehicleTypeAsync();
-    print("Type is ${vehicleType}");
+    print("Type is $vehicleType");
     if (vehicleType != null) {
       setState(() {
         motorFormSqlDb.vehicleType = vehicleType;
@@ -3765,7 +3896,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var numberOfCylinders = await vin.getEngineNumberofCylindersAsync();
-    print("EngineNumber of Cylinders is ${numberOfCylinders}");
+    print("EngineNumber of Cylinders is $numberOfCylinders");
     if (numberOfCylinders != null) {
       setState(() {
         motorFormSqlDb.numberOfCylinders = numberOfCylinders;
@@ -3775,7 +3906,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var safetyFeatures = await vin.getActiveSafetySystemNoteAsync();
-    print("Active Safety SystemNote is ${safetyFeatures}");
+    print("Active Safety SystemNote is $safetyFeatures");
     if (safetyFeatures != null) {
       setState(() {
         motorFormSqlDb.safetyFeatures = safetyFeatures;
@@ -3785,7 +3916,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var transmission = await vin.getTransmissionStyleAsync();
-    print("Transmission Style is ${transmission}");
+    print("Transmission Style is $transmission");
     if (transmission != null) {
       setState(() {
         motorFormSqlDb.transmission = transmission;
@@ -3795,7 +3926,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var steeringLocation = await vin.getSteeringLocationAsync();
-    print("Steering Location is ${steeringLocation}");
+    print("Steering Location is $steeringLocation");
     if (steeringLocation != null) {
       setState(() {
         motorFormSqlDb.steeringLocation = steeringLocation;
@@ -3805,7 +3936,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var fuelType = await vin.getFuelTypePrimaryAsync();
-    print("Fuel Type Primary is ${fuelType}");
+    print("Fuel Type Primary is $fuelType");
     if (fuelType != null) {
       setState(() {
         motorFormSqlDb.fuelType = fuelType;
@@ -3815,7 +3946,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var trim = await vin.getTrimAsync();
-    print("Trim is ${trim}");
+    print("Trim is $trim");
     if (trim != null) {
       setState(() {
         motorFormSqlDb.trim = trim;
@@ -3824,7 +3955,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var driveType = await vin.getDriveTypeAsync();
-    print("Drive Type is ${driveType}");
+    print("Drive Type is $driveType");
     if (driveType != null) {
       setState(() {
         motorFormSqlDb.driveType = driveType;
@@ -3834,7 +3965,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var bodyType = await vin.getBodyTypeAsync();
-    print("Body Type is ${bodyType}");
+    print("Body Type is $bodyType");
     if (bodyType != null) {
       setState(() {
         motorFormSqlDb.bodyType = bodyType;
@@ -3844,12 +3975,12 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var displacementL = await vin.getDisplacementLAsync();
-    print("Displacement (L) is ${displacementL}");
+    print("Displacement (L) is $displacementL");
 
     String disp = double.parse(displacementL).toStringAsFixed(1);
     if (disp != null && fuelType != null) {
       var engine = ("$disp L $fuelType").toString();
-      print("Engine is ${engine}");
+      print("Engine is $engine");
 
       if (engine != null) {
         setState(() {
@@ -3861,56 +3992,34 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     // var generated = VINGenerator().generate();
-    // print('Randomly Generated VIN is ${generated}');
+    // print('Randomly Generated VIN is $generated');
   }
 
-  // Future<void> _updateCategoryCount(bool addCatCount) async {
-  //   int catCount;
-  //   var catNamesCount = catNames
-  //       .where((e) => e.catName.trim() == motorFormSqlDb.catName.trim())
-  //       .toList();
-
-  //   if (catNamesCount.length > 0) {
-  //     if (catNamesCount[0].totalProducts != null) {
-  //       if (addCatCount) {
-  //         catCount = catNamesCount[0].totalProducts + 1;
-  //       } else {
-  //         catCount = catNamesCount[0].totalProducts - 1;
-  //       }
-  //     } else {
-  //       catCount = 0;
-  //     }
-  //     await FirebaseFirestore.instance
-  //         .collection('categories')
-  //         .doc(catNamesCount[0].catDocId)
-  //         .update({'totalProducts': catCount})
-  //         .then((value) => print("categories Updated"))
-  //         .catchError((error) => print("Failed to update categories: $error"));
-  //   } else {
-  //     print("No categories on database!!");
-  //   }
-  // }
+  void _removeImage(List<ProdImagesSqlDb> prodImagesSqlDbData, int index) {
+    // listOfRemovedImg will contain all images which are already in firebase storage, that has to be removed
+    if (prodImagesSqlDbData[index].imageUrl.substring(0, 5) == 'https') {
+      listOfRemovedImg.add(prodImagesSqlDbData[index]);
+    }
+    prodImagesSqlDbData.removeAt(index);
+  }
 
   Future<String> _postAds() async {
     prodImagesSqlDb = prodImagesSqlDbE + prodImagesSqlDbI;
 
-    _prodName = (motorFormSqlDb.year +
-            ' ' +
-            motorFormSqlDb.make +
-            ' ' +
-            motorFormSqlDb.model)
-        .toString();
-    print('post check2');
+    if (motorFormSqlDb.catName.trim() != 'Vehicle' &&
+        motorFormSqlDb.catName.trim() != 'Electronics' &&
+        motorFormSqlDb.catName.trim() != 'Home Appliances') {
+      motorFormSqlDb.make = "Others";
+      motorFormSqlDb.model = "Others";
+    }
 
-    if (motorFormSqlDb.catName.trim() == 'Car'.trim() ||
-        motorFormSqlDb.catName.trim() == 'Motorbike'.trim() ||
-        motorFormSqlDb.catName.trim() == 'Truck'.trim()) {
-      print('post check3 - ${motorFormSqlDb.subCatDocId}');
-
+    if (motorFormSqlDb.catName.trim() == 'Vehicle' &&
+        !motorFormSqlDb.subCatType.contains('Accessories') &&
+        !motorFormSqlDb.subCatType.contains('Others')) {
       await FirebaseFirestore.instance.collection('products').add({
-        'prodName': _prodName,
+        'prodName': motorFormSqlDb.prodName,
         'catName': motorFormSqlDb.catName,
-        'subCatDocId': motorFormSqlDb.subCatDocId,
+        'subCatType': motorFormSqlDb.subCatType,
         'prodDes': motorFormSqlDb.prodDes,
         'sellerNotes': motorFormSqlDb.sellerNotes,
         'year': motorFormSqlDb.year,
@@ -3927,13 +4036,13 @@ class _PostInputFormState extends State<PostInputForm>
         'longitude': _longitude,
         'userDetailDocId': _userDetailDocId,
         'deliveryInfo': motorFormSqlDb.deliveryInfo,
+        'typeOfAd': motorFormSqlDb.typeOfAd,
         'distance': '',
         'status': 'Pending',
         'forSaleBy': motorFormSqlDb.forSaleBy,
         'listingStatus': 'Available',
         'createdAt': Timestamp.now(),
       }).then((p) async {
-        print('post check4');
         await FirebaseFirestore.instance.collection('CtmSpecialInfo').add({
           'prodDocId': p.id.toString(),
           'year': motorFormSqlDb.year,
@@ -3959,7 +4068,6 @@ class _PostInputFormState extends State<PostInputForm>
           'steeringLocation': motorFormSqlDb.steeringLocation,
         }).then(
           (ctm) async {
-            print('post check5');
             _prodDocId = p.id;
 
             if (_prodDocId.isNotEmpty) {
@@ -3971,8 +4079,8 @@ class _PostInputFormState extends State<PostInputForm>
 
                   final ref = FirebaseStorage.instance
                       .ref()
-                      .child(
-                          'product_images/${user.uid}/${motorFormSqlDb.catName}/${motorFormSqlDb.make}')
+                      .child('product_images/${user.uid}')
+                      // 'product_images/$_prodDocId')
                       .child(motorFormSqlDb.make +
                           motorFormSqlDb.model +
                           fileName +
@@ -3987,8 +4095,22 @@ class _PostInputFormState extends State<PostInputForm>
               }
 
               print('All images are loaded into storage');
-
+              if (prodImagesSqlDb.length > 0) {
+                if (prodImagesSqlDb.any((e) => e.featuredImage == "true")) {
+                } else {
+                  prodImagesSqlDb[0].featuredImage = "true";
+                }
+              }
+              _featuredImage = false;
               for (var i = 0; i < prodImagesSqlDb.length; i++) {
+                if (prodImagesSqlDb[i].featuredImage == 'true') {
+                  if (!_featuredImage) {
+                    _featuredImage = true;
+                  } else {
+                    prodImagesSqlDb[i].featuredImage = 'false';
+                  }
+                }
+
                 await FirebaseFirestore.instance.collection('ProdImages').add({
                   'prodDocId': _prodDocId,
                   'imageType': prodImagesSqlDb[i].imageType,
@@ -4002,16 +4124,14 @@ class _PostInputFormState extends State<PostInputForm>
                       motorFormSqlDb.imageUrlFeatured =
                           prodImagesSqlDb[i].imageUrl;
                       _prodUpdated = 'Uncompleted';
-                      print('update status 1 -- $_prodUpdated');
+
                       await _updateProdFeaturedImage(
                               _prodDocId, motorFormSqlDb.imageUrlFeatured)
                           .then(
                         (value) {
-                          print('update status 21 -- $_prodUpdated');
                           _prodUpdated = value;
                         },
                       );
-                      print('update status 2 -- $_prodUpdated');
                     }
                   },
                 );
@@ -4026,11 +4146,10 @@ class _PostInputFormState extends State<PostInputForm>
       });
       // return _prodUpdated;
     } else {
-      print('post check6');
       await FirebaseFirestore.instance.collection('products').add({
-        'prodName': _prodName,
+        'prodName': motorFormSqlDb.prodName,
         'catName': motorFormSqlDb.catName,
-        'subCatDocId': motorFormSqlDb.subCatDocId,
+        'subCatType': motorFormSqlDb.subCatType,
         'prodDes': motorFormSqlDb.prodDes,
         'sellerNotes': motorFormSqlDb.sellerNotes,
         'year': motorFormSqlDb.year,
@@ -4047,14 +4166,13 @@ class _PostInputFormState extends State<PostInputForm>
         'longitude': _longitude,
         'userDetailDocId': _userDetailDocId,
         'deliveryInfo': motorFormSqlDb.deliveryInfo,
+        'typeOfAd': motorFormSqlDb.typeOfAd,
         'distance': '',
         'status': 'Pending',
         'forSaleBy': motorFormSqlDb.forSaleBy,
         'listingStatus': 'Available',
         'createdAt': Timestamp.now(),
       }).then((p) async {
-        print('post check7');
-        print('check prod Image insert in storage');
         _prodDocId = p.id;
 
         if (_prodDocId.isNotEmpty) {
@@ -4065,18 +4183,14 @@ class _PostInputFormState extends State<PostInputForm>
 
               final ref = FirebaseStorage.instance
                   .ref()
-                  .child(
-                      'product_images/${user.uid}/${motorFormSqlDb.catName}/${motorFormSqlDb.make}')
+                  .child('product_images/${user.uid}')
+                  // 'product_images/$_prodDocId')
                   .child(motorFormSqlDb.make +
                       motorFormSqlDb.model +
                       fileName +
                       '.jpg');
 
-              print('check prod Image insert in storage1');
-
               await ref.putFile(File(prodImagesSqlDb[i].imageUrl));
-
-              print('check prod Image insert in storage2');
 
               _imageUrl = await ref.getDownloadURL();
 
@@ -4086,8 +4200,21 @@ class _PostInputFormState extends State<PostInputForm>
 
           print('All images are loaded into storage');
 
+          if (prodImagesSqlDb.length > 0) {
+            if (prodImagesSqlDb.any((e) => e.featuredImage == "true")) {
+            } else {
+              prodImagesSqlDb[0].featuredImage = "true";
+            }
+          }
+          _featuredImage = false;
           for (var i = 0; i < prodImagesSqlDb.length; i++) {
-            print('check prod Image insert in firebase');
+            if (prodImagesSqlDb[i].featuredImage == 'true') {
+              if (!_featuredImage) {
+                _featuredImage = true;
+              } else {
+                prodImagesSqlDb[i].featuredImage = 'false';
+              }
+            }
             await FirebaseFirestore.instance.collection('ProdImages').add({
               'prodDocId': _prodDocId,
               'imageType': prodImagesSqlDb[i].imageType,
@@ -4099,86 +4226,354 @@ class _PostInputFormState extends State<PostInputForm>
                   prodImagesSqlDb[i].imageUrl.isNotEmpty) {
                 motorFormSqlDb.imageUrlFeatured = prodImagesSqlDb[i].imageUrl;
                 _prodUpdated = 'Uncompleted';
-                print('update status 1 -- $_prodUpdated');
+
                 await _updateProdFeaturedImage(
                         _prodDocId, motorFormSqlDb.imageUrlFeatured)
                     .then(
                   (value) {
-                    print('update status 21 -- $_prodUpdated');
                     _prodUpdated = value;
                   },
                 );
-                print('update status 2 -- $_prodUpdated');
               }
             });
           }
-          // print('update status 30 -- $_prodUpdated');
-          // return _prodUpdated;
         }
       }).catchError((onError) {
         print('Unable to post your add please try again!!');
       });
-      // print('update status 31 -- $_prodUpdated');
-      // return _prodUpdated;
     }
-    print('update status 32 -- $_prodUpdated');
+
     return _prodUpdated;
   }
 
   Future<void> _deleteAndProcess() async {
-    // _updateCategoryCount(true);
-    print('check post 1****');
     await _deleteImageAll();
-    print('check post 3****');
+
     await _deleteMotorFormAll().then((value) async {
-      // _showPostDialog();
-      print('check post 4****');
       if (_prodUpdated == 'Success') {
-        print('check post 5****');
-        // await _dropMotorForm();
-        setState(() {
-          _isUpdated = true;
-        });
-        // Navigator.pushReplacement(
-        //   context,
-        //   MaterialPageRoute(
-        //       builder: (_) {
-        //         return TabsScreen();
-        //       },
-        //       fullscreenDialog: true),
-        // );
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Post added successfully!'),
-              action: SnackBarAction(
-                label: 'Continue',
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) {
-                          return TabsScreen();
-                        },
-                        fullscreenDialog: true),
-                  );
-                },
-              )),
-        );
+        setState(() {});
       }
-      print('check post 6****');
-      // Navigator.pushReplacement(
-      //   context,
-      //   MaterialPageRoute(
-      //       builder: (_) {
-      //         return TabsScreen();
-      //       },
-      //       fullscreenDialog: true),
-      // );
     });
   }
 
-  Future<void> _deleteProduct(String prodId, String category) async {
-    print('delete product1');
+  Future<void> _deleteRemovedImgInStorage() async {
+    if (listOfRemovedImg.length > 0) {
+      for (var i = 0; i < listOfRemovedImg.length; i++) {
+        try {
+          Reference ref =
+              FirebaseStorage.instance.refFromURL(listOfRemovedImg[i].imageUrl);
+          await ref.delete();
+        } catch (e) {
+          print('Failed with error code: ${e.code}');
+          print(e.message);
+        }
+      }
+    }
+  }
+
+  Future<String> _updateAds(
+      String prodId, String category, String subCategory) async {
+    prodImagesSqlDb = prodImagesSqlDbE + prodImagesSqlDbI;
+
+    if (motorFormSqlDb.catName.trim() != 'Vehicle' &&
+        motorFormSqlDb.catName.trim() != 'Electronics' &&
+        motorFormSqlDb.catName.trim() != 'Home Appliances') {
+      motorFormSqlDb.make = "Others";
+      motorFormSqlDb.model = "Others";
+    }
+    WriteBatch batch = FirebaseFirestore.instance.batch();
+
+    if (motorFormSqlDb.catName.trim() == 'Vehicle' &&
+        !motorFormSqlDb.subCatType.contains('Accessories') &&
+        !motorFormSqlDb.subCatType.contains('Others')) {
+      await FirebaseFirestore.instance
+          .collection('products')
+          .doc(prodId)
+          .update({
+        'prodName': motorFormSqlDb.prodName,
+        'catName': motorFormSqlDb.catName,
+        'subCatType': motorFormSqlDb.subCatType,
+        'prodDes': motorFormSqlDb.prodDes,
+        'sellerNotes': motorFormSqlDb.sellerNotes,
+        'year': motorFormSqlDb.year,
+        'make': motorFormSqlDb.make,
+        'model': motorFormSqlDb.model,
+        'prodCondition': motorFormSqlDb.prodCondition,
+        'price': motorFormSqlDb.price,
+        'currencyName': _currencyName,
+        'currencySymbol': _currencySymbol,
+        'imageUrlFeatured': motorFormSqlDb.imageUrlFeatured,
+        'addressLocation': _addressLocation,
+        'countryCode': _countryCode,
+        'latitude': _latitude,
+        'longitude': _longitude,
+        'userDetailDocId': _userDetailDocId,
+        'deliveryInfo': motorFormSqlDb.deliveryInfo,
+        'typeOfAd': motorFormSqlDb.typeOfAd,
+        'distance': '',
+        'status': 'Pending',
+        'forSaleBy': motorFormSqlDb.forSaleBy,
+        'listingStatus': 'Available',
+        'createdAt': Timestamp.now(),
+      }).then((p) async {
+        await FirebaseFirestore.instance
+            .collection('CtmSpecialInfo')
+            .where('prodDocId', isEqualTo: prodId)
+            .get()
+            .then((querySnapshot) {
+          querySnapshot.docs.forEach((document) {
+            batch.update(document.reference, {
+              'year': motorFormSqlDb.year,
+              'make': motorFormSqlDb.make,
+              'model': motorFormSqlDb.model,
+              'vehicleType': motorFormSqlDb.vehicleType,
+              'mileage': motorFormSqlDb.mileage,
+              'vin': motorFormSqlDb.vin,
+              'engine': motorFormSqlDb.engine,
+              'fuelType': motorFormSqlDb.fuelType,
+              'options': motorFormSqlDb.options,
+              'subModel': motorFormSqlDb.subModel,
+              'numberOfCylinders': motorFormSqlDb.numberOfCylinders,
+              'safetyFeatures': motorFormSqlDb.safetyFeatures,
+              'driveType': motorFormSqlDb.driveType,
+              'interiorColor': motorFormSqlDb.interiorColor,
+              'bodyType': motorFormSqlDb.bodyType,
+              'forSaleBy': motorFormSqlDb.forSaleBy,
+              'warranty': motorFormSqlDb.warranty,
+              'exteriorColor': motorFormSqlDb.exteriorColor,
+              'trim': motorFormSqlDb.trim,
+              'transmission': motorFormSqlDb.transmission,
+              'steeringLocation': motorFormSqlDb.steeringLocation,
+            });
+          });
+          return batch.commit().then(
+            (value) async {
+              // _prodDocId = prodId;
+
+              if (prodId.isNotEmpty) {
+                for (var i = 0; i < prodImagesSqlDb.length; i++) {
+                  if (prodImagesSqlDb[i].imageUrl.substring(0, 5) != 'https') {
+                    final fileNameExt =
+                        prodImagesSqlDb[i].imageUrl.split('/').last;
+                    final fileName = fileNameExt.split('.').first;
+
+                    final ref = FirebaseStorage.instance
+                        .ref()
+                        .child('product_images/${user.uid}')
+                        // 'product_images/$prodId')
+                        .child(motorFormSqlDb.make +
+                            motorFormSqlDb.model +
+                            fileName +
+                            '.jpg');
+
+                    await ref.putFile(File(prodImagesSqlDb[i].imageUrl));
+
+                    _imageUrl = await ref.getDownloadURL();
+
+                    prodImagesSqlDb[i].imageUrl = _imageUrl;
+                  }
+                }
+
+                print('All images are loaded into storage');
+                if (prodImagesSqlDb.length > 0) {
+                  if (prodImagesSqlDb.any((e) => e.featuredImage == "true")) {
+                  } else {
+                    prodImagesSqlDb[0].featuredImage = "true";
+                  }
+                }
+
+                // Product Image delete
+
+                batch = FirebaseFirestore.instance.batch();
+
+                await FirebaseFirestore.instance
+                    .collection('ProdImages')
+                    .where('prodDocId', isEqualTo: prodId)
+                    .get()
+                    .then((querySnapshot) {
+                  querySnapshot.docs.forEach((document) {
+                    batch.delete(document.reference);
+                  });
+
+                  return batch.commit().catchError((error) =>
+                      print("Failed to delete products in ProdImages: $error"));
+                });
+
+                //
+                _featuredImage = false;
+                for (var i = 0; i < prodImagesSqlDb.length; i++) {
+                  if (prodImagesSqlDb[i].featuredImage == 'true') {
+                    if (!_featuredImage) {
+                      _featuredImage = true;
+                    } else {
+                      prodImagesSqlDb[i].featuredImage = 'false';
+                    }
+                  }
+                  await FirebaseFirestore.instance
+                      .collection('ProdImages')
+                      .add({
+                    'prodDocId': prodId,
+                    'imageType': prodImagesSqlDb[i].imageType,
+                    'imageUrl': prodImagesSqlDb[i].imageUrl,
+                    'featuredImage': prodImagesSqlDb[i].featuredImage == 'true'
+                        ? true
+                        : false,
+                  }).then(
+                    (value) async {
+                      if (prodImagesSqlDb[i].featuredImage == 'true' &&
+                          prodImagesSqlDb[i].imageUrl.isNotEmpty) {
+                        motorFormSqlDb.imageUrlFeatured =
+                            prodImagesSqlDb[i].imageUrl;
+                        _prodUpdated = 'Uncompleted';
+
+                        await _updateProdFeaturedImage(
+                                prodId, motorFormSqlDb.imageUrlFeatured)
+                            .then(
+                          (value) {
+                            _prodUpdated = value;
+                          },
+                        );
+                      }
+                    },
+                  );
+                }
+              }
+            },
+          ).catchError((error) =>
+              print("Failed to update data in CtmSpecialInfo batch: $error"));
+        }).catchError((error) => print(
+                "Failed to get data in CtmSpecialInfo for update: $error"));
+      }).catchError((onError) {
+        print('Unable to update your add please try again!!');
+      });
+
+      // return _prodUpdated;
+    } else {
+      await FirebaseFirestore.instance
+          .collection('products')
+          .doc(prodId)
+          .update({
+        'prodName': motorFormSqlDb.prodName,
+        'catName': motorFormSqlDb.catName,
+        'subCatType': motorFormSqlDb.subCatType,
+        'prodDes': motorFormSqlDb.prodDes,
+        'sellerNotes': motorFormSqlDb.sellerNotes,
+        'year': motorFormSqlDb.year,
+        'make': motorFormSqlDb.make,
+        'model': motorFormSqlDb.model,
+        'prodCondition': motorFormSqlDb.prodCondition,
+        'price': motorFormSqlDb.price,
+        'currencyName': _currencyName,
+        'currencySymbol': _currencySymbol,
+        'imageUrlFeatured': motorFormSqlDb.imageUrlFeatured,
+        'addressLocation': _addressLocation,
+        'countryCode': _countryCode,
+        'latitude': _latitude,
+        'longitude': _longitude,
+        'userDetailDocId': _userDetailDocId,
+        'deliveryInfo': motorFormSqlDb.deliveryInfo,
+        'typeOfAd': motorFormSqlDb.typeOfAd,
+        'distance': '',
+        'status': 'Pending',
+        'forSaleBy': motorFormSqlDb.forSaleBy,
+        'listingStatus': 'Available',
+        'createdAt': Timestamp.now(),
+      }).then((p) async {
+        // _prodDocId = prodId;
+
+        if (prodId.isNotEmpty) {
+          for (var i = 0; i < prodImagesSqlDb.length; i++) {
+            if (prodImagesSqlDb[i].imageUrl.substring(0, 5) != 'https') {
+              final fileNameExt = prodImagesSqlDb[i].imageUrl.split('/').last;
+              final fileName = fileNameExt.split('.').first;
+
+              final ref = FirebaseStorage.instance
+                  .ref()
+                  .child('product_images/${user.uid}')
+                  // 'product_images/$_prodDocId')
+                  .child(motorFormSqlDb.make +
+                      motorFormSqlDb.model +
+                      fileName +
+                      '.jpg');
+
+              await ref.putFile(File(prodImagesSqlDb[i].imageUrl));
+
+              _imageUrl = await ref.getDownloadURL();
+
+              prodImagesSqlDb[i].imageUrl = _imageUrl;
+            }
+          }
+
+          print('All images are loaded into storage');
+
+          if (prodImagesSqlDb.length > 0) {
+            if (prodImagesSqlDb.any((e) => e.featuredImage == "true")) {
+            } else {
+              prodImagesSqlDb[0].featuredImage = "true";
+            }
+          }
+
+          // Product Image delete
+
+          batch = FirebaseFirestore.instance.batch();
+
+          await FirebaseFirestore.instance
+              .collection('ProdImages')
+              .where('prodDocId', isEqualTo: prodId)
+              .get()
+              .then((querySnapshot) {
+            querySnapshot.docs.forEach((document) {
+              batch.delete(document.reference);
+            });
+
+            return batch.commit().catchError((error) =>
+                print("Failed to delete products in ProdImages: $error"));
+          });
+
+          //
+
+          _featuredImage = false;
+          for (var i = 0; i < prodImagesSqlDb.length; i++) {
+            if (prodImagesSqlDb[i].featuredImage == 'true') {
+              if (!_featuredImage) {
+                _featuredImage = true;
+              } else {
+                prodImagesSqlDb[i].featuredImage = 'false';
+              }
+            }
+            await FirebaseFirestore.instance.collection('ProdImages').add({
+              'prodDocId': prodId,
+              'imageType': prodImagesSqlDb[i].imageType,
+              'imageUrl': prodImagesSqlDb[i].imageUrl,
+              'featuredImage':
+                  prodImagesSqlDb[i].featuredImage == 'true' ? true : false,
+            }).then((value) async {
+              if (prodImagesSqlDb[i].featuredImage == 'true' &&
+                  prodImagesSqlDb[i].imageUrl.isNotEmpty) {
+                motorFormSqlDb.imageUrlFeatured = prodImagesSqlDb[i].imageUrl;
+                _prodUpdated = 'Uncompleted';
+
+                await _updateProdFeaturedImage(
+                        prodId, motorFormSqlDb.imageUrlFeatured)
+                    .then(
+                  (value) {
+                    _prodUpdated = value;
+                  },
+                );
+              }
+            });
+          }
+        }
+      }).catchError((onError) {
+        print('Unable to post your add please try again!!');
+      });
+    }
+
+    return _prodUpdated;
+  }
+
+  Future<void> _deleteProduct(
+      String prodId, String category, String subCategory) async {
     WriteBatch batch = FirebaseFirestore.instance.batch();
 
     return await FirebaseFirestore.instance
@@ -4186,9 +4581,9 @@ class _PostInputFormState extends State<PostInputForm>
         .doc(prodId)
         .delete()
         .then((value) async {
-      if (category.toLowerCase().trim() == 'car'.trim() ||
-          category.toLowerCase().trim() == 'truck'.trim() ||
-          category.toLowerCase().trim() == 'motorbike'.trim()) {
+      if (category.trim() == 'Vehicle' &&
+          !subCategory.contains('Accessories') &&
+          !subCategory.contains('Others')) {
         await FirebaseFirestore.instance
             .collection('CtmSpecialInfo')
             .where('prodDocId', isEqualTo: prodId)
@@ -4196,13 +4591,31 @@ class _PostInputFormState extends State<PostInputForm>
             .then((querySnapshot) {
           querySnapshot.docs.forEach((document) {
             batch.delete(document.reference);
+            print('ctm delete success!');
           });
-          // return batch.commit().catchError((error) => print(
-          //     "Failed to delete products in CtmSpecialInfo batch: $error"));
+          return batch.commit().catchError((error) => print(
+              "Failed to delete products in CtmSpecialInfo batch: $error"));
         }).catchError((error) =>
                 print("Failed to get product in CtmSpecialInfo: $error"));
       }
-      print('delete product2');
+
+      batch = FirebaseFirestore.instance.batch();
+
+      await FirebaseFirestore.instance
+          .collection('favoriteProd')
+          .where('prodDocId', isEqualTo: prodId)
+          .get()
+          .then((querySnapshot) {
+        querySnapshot.docs.forEach((document) {
+          batch.delete(document.reference);
+        });
+
+        return batch.commit().catchError((error) =>
+            print("Failed to delete products in FavoriteProd: $error"));
+      });
+
+      batch = FirebaseFirestore.instance.batch();
+
       await FirebaseFirestore.instance
           .collection('ProdImages')
           .where('prodDocId', isEqualTo: prodId)
@@ -4211,17 +4624,24 @@ class _PostInputFormState extends State<PostInputForm>
         querySnapshot.docs.forEach((document) {
           batch.delete(document.reference);
         });
-        //git check - master
-        print('delete product3');
         return batch.commit().catchError((error) =>
             print("Failed to delete products in ProdImages: $error"));
       });
+
+      final refDel =
+          FirebaseStorage.instance.ref().child('product_images/${user.uid}');
+      // 'product_images/$prodId');
+
+      // var url = await refDel.getDownloadURL();
+
+      // print('url - $url');
+
+      await refDel.delete().then((value) => 'Product Deleted in storage');
     }).catchError((error) => print("Failed to delete product: $error"));
   }
 
   Future<String> _updateProdFeaturedImage(
       String prodDocId, String featuredImageUrl) async {
-    print('check update1 - $_prodUpdated');
     await FirebaseFirestore.instance
         .collection('products')
         .doc(prodDocId)
@@ -4244,7 +4664,7 @@ class _PostInputFormState extends State<PostInputForm>
         print('update completed - $_prodUpdated');
       },
     );
-    print('check update2 - $_prodUpdated');
+
     return _prodUpdated;
   }
 
@@ -4278,7 +4698,6 @@ class _PostInputFormState extends State<PostInputForm>
   }
 
   Future<void> _deleteImageAll() async {
-    print('check delete ****');
     await Provider.of<ProdImagesSqlDbProvider>(context, listen: false)
         .deleteImagesAll();
   }
@@ -4290,24 +4709,70 @@ class _PostInputFormState extends State<PostInputForm>
     setState(() {
       _motorFormCount = count;
     });
-    print('motor form count initial - $_motorFormCount');
+
     if (_motorFormCount > 0) {
       List<MotorFormSqlDb> motorFormSqlDbL =
           await motorFormProvider.fetchMotorForm();
+      _initializeMotorVariables();
       motorFormSqlDb = motorFormSqlDbL[0];
 
+      _specialVehicle = false;
+      if (motorFormSqlDb.subCatType == 'Cars' ||
+          motorFormSqlDb.subCatType == 'Trucks' ||
+          motorFormSqlDb.subCatType == 'Caravans') {
+        _specialVehicle = true;
+      }
+
       // Asign values to the controllers
-      if (motorFormSqlDb.catName.trim() == 'Car'.trim() ||
-          motorFormSqlDb.catName.trim() == 'Truck'.trim()) {
+      if (_specialVehicle) {
         controllerEC.text = motorFormSqlDb.exteriorColor;
         controllerIC.text = motorFormSqlDb.interiorColor;
-      } else if (motorFormSqlDb.catName.trim() == 'Motorbike'.trim()) {
+      } else {
         controllerEC.text = motorFormSqlDb.exteriorColor;
       }
     }
     // if (_motorFormCount == 0) {
     //   motorFormSqlDb = MotorFormSqlDb();
     // }
+  }
+
+  _initializeMotorVariables() {
+    motorFormSqlDb = MotorFormSqlDb(
+      id: '',
+      catName: '',
+      subCatType: '',
+      prodName: '',
+      prodDes: '',
+      sellerNotes: '',
+      prodCondition: '',
+      price: '',
+      imageUrlFeatured: '',
+      deliveryInfo: '',
+      typeOfAd: '',
+      year: '',
+      make: '',
+      model: '',
+      vehicleType: '',
+      mileage: '',
+      vin: '',
+      engine: '',
+      fuelType: '',
+      options: '',
+      subModel: '',
+      numberOfCylinders: '',
+      safetyFeatures: '',
+      driveType: '',
+      interiorColor: '',
+      bodyType: '',
+      exteriorColor: '',
+      forSaleBy: '',
+      warranty: '',
+      trim: '',
+      transmission: '',
+      steeringLocation: '',
+      vehicleTypeYear: '',
+      editPost: '',
+    );
   }
 
   Future<void> _saveMotorForm(MotorFormSqlDb motorFormSqlDb) async {
@@ -4318,6 +4783,9 @@ class _PostInputFormState extends State<PostInputForm>
   Future<void> _updateMotorForm(
       String id, String columnName, String columnValue) async {
     await motorFormProvider.updateMotorForm(id, columnName, columnValue);
+    if (columnName == 'catName') {
+      await motorFormProvider.updateMotorForm(id, "subCatType", "Unspecified");
+    }
     await _initialLoadMotorForm();
   }
 
@@ -4327,69 +4795,5 @@ class _PostInputFormState extends State<PostInputForm>
 
   Future<void> _dropMotorForm() async {
     await motorFormProvider.dropMotorForm();
-  }
-}
-
-class ModelItemsSearch extends SearchDelegate<String> {
-  String selectedItem = "";
-  @override
-  List<Widget> buildActions(BuildContext context) {
-    // throw UnimplementedError();
-    return [
-      IconButton(
-        icon: Icon(Icons.clear),
-        onPressed: () {
-          query = "";
-        },
-      ),
-    ];
-  }
-
-  @override
-  Widget buildLeading(BuildContext context) {
-    // throw UnimplementedError();
-    return IconButton(
-      icon: Icon(Icons.arrow_back),
-      onPressed: () {
-        close(context, selectedItem);
-      },
-    );
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    // throw UnimplementedError();
-    return Center(
-      child: Text(selectedItem),
-    );
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    // throw UnimplementedError();
-    List<Model> models = Provider.of<List<Model>>(context);
-    final myList = query.isEmpty
-        ? models
-        : models
-            .where((p) => (p.model.toLowerCase()).contains(query.toLowerCase()))
-            .toList();
-    return myList.isEmpty
-        ? Text('No search ')
-        : ListView.builder(
-            itemCount: myList.length,
-            itemBuilder: (context, index) {
-              final Model listItem = myList[index];
-              selectedItem = myList[0].model;
-              return ListTile(
-                title: Text(listItem.model),
-                onTap: () {
-                  // selectedItem = listItem.title;
-                  // Navigator.of(context).pushNamed(DetailScreen.routeName,
-                  //     arguments: selectedItem);
-                  // showResults(context);
-                },
-              );
-            },
-          );
   }
 }

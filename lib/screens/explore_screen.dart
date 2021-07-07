@@ -1,10 +1,8 @@
+//Imports for pubspec Packages
 import 'dart:io';
 
-import 'package:blrber/models/user_detail.dart';
-import 'package:blrber/screens/motor_filter_screen.dart';
-import 'package:blrber/screens/search_results.dart';
-import 'package:blrber/services/load_mlmodel.dart';
-import 'package:blrber/widgets/display_product_grid.dart';
+import 'package:avatar_glow/avatar_glow.dart';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flag/flag.dart';
 import 'package:flutter/cupertino.dart';
@@ -13,22 +11,27 @@ import 'package:google_ml_vision/google_ml_vision.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tflite/tflite.dart';
-import 'package:flutter_switch/flutter_switch.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-// Imports for models
+// Imports for Models
+import '../constants.dart';
 import '../models/category.dart';
 import '../models/product.dart';
+import '../models/user_detail.dart';
 
 // Imports for maps/location
 import '../provider/get_current_location.dart';
 
-// Imports for widgets
+// Imports for Widgets
 import '../widgets/display_product_grid.dart';
 
-// Imports for screens
+// Imports for Screens
 import '../screens/product_detail_screen.dart';
+import '../screens/search_results.dart';
 
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+// Imports for Services
+import '../services/connectivity.dart';
+import '../services/load_mlmodel.dart';
 
 class ExploreScreen extends StatefulWidget {
   static const routeName = '/explore-screen';
@@ -49,18 +52,20 @@ class ImageLabelInfo {
 
 class _ExploreScreenState extends State<ExploreScreen> {
   bool isInitState = false;
-  String _prodCondition = "Used";
+
   String _displayType = "Category";
   List _output;
   String imageLabel = "";
   bool status = false;
-  // String _catName = "";
+
   String _countryCode = "";
   bool _dataLoaded = false;
+  bool _connectionStatus = false;
 
   File pickedImage;
 
   TabController _tabController;
+
   List<Category> categoryList = [];
   List<Product> products = [];
   GetCurrentLocation getCurrentLocation = GetCurrentLocation();
@@ -68,13 +73,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   void initState() {
     isInitState = true;
-    getCurrentLocation =
-        Provider.of<GetCurrentLocation>(context, listen: false);
-    getCurrentLocation.getCurrentPosition();
-    print('check loc1 init - ${getCurrentLocation.latitude}');
+    _checkConnectivity();
+    print("Connectivity after ");
+    // getCurrentLocation =
+    //     Provider.of<GetCurrentLocation>(context, listen: false);
+    // getCurrentLocation.getCurrentPosition();
+
+    // LoadMlModel.loadModel();
 
     super.initState();
-    LoadMlModel.loadModel();
   }
 
   void _pickImage() async {
@@ -83,11 +90,17 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
     setState(() {
       pickedImage = File(imageFile.path);
-      print('picked image - $pickedImage');
     });
 
     if (pickedImage != null) {
-      runModelOnImage();
+      // runModelOnImage(); It is to run ml on tflite model
+      var prodName = await findLabels(
+          pickedImage); // It is to run ml on firebase ml vision
+
+      if (prodName != "") {
+        Navigator.of(context)
+            .pushNamed(SearchResults.routeName, arguments: prodName);
+      }
     }
   }
 
@@ -105,7 +118,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
       imageLabel = _output[0]["label"];
 
       var imageLabelOut =
-          imageLabel.split(" ")[1] + " " + imageLabel.split(" ")[2];
+          imageLabel.split(",")[0] + " " + imageLabel.split(",")[1];
 
       print('image labels  out- $imageLabelOut');
 
@@ -116,70 +129,55 @@ class _ExploreScreenState extends State<ExploreScreen> {
     });
   }
 
-  // @override
-  // void didChangeDependencies() {
-  //   // getCurrentLocation = Provider.of<GetCurrentLocation>(context);
-  //   // print('check loc1 - ${getCurrentLocation.latitude}');
+  Future<String> findLabels(File _image) async {
+    List<ImageLabelInfo> _imageLabels = [];
+    final GoogleVisionImage visionImage = GoogleVisionImage.fromFile(_image);
 
-  //   // getCurrentLocation.getCurrentPosition();
+    final ImageLabeler labeler = GoogleVision.instance
+        .imageLabeler(ImageLabelerOptions(confidenceThreshold: 0.80));
 
-  //   // print('check loc2 - ${getCurrentLocation.latitude}');
-  //   // _setBuyingCountryCode();
-  //   // final categories = Provider.of<List<Category>>(context);
-  //   // products = Provider.of<List<Product>>(context);
+    final List<ImageLabel> labels = await labeler.processImage(visionImage);
 
-  //   // if (_countryCode.isEmpty) {
-  //   //   _countryCode = getCurrentLocation.countryCode;
-  //   // }
+    for (ImageLabel label in labels) {
+      ImageLabelInfo _imageLabel = ImageLabelInfo();
+      _imageLabel.imageLabel = label.text;
+      _imageLabel.confidence = label.confidence;
 
-  //   // if (products != null) {
-  //   //   products = products
-  //   //       .where((e) =>
-  //   //           e.status == 'Verified' &&
-  //   //           e.listingStatus == 'Available' &&
-  //   //           e.countryCode == _countryCode)
-  //   //       .toList();
-  //   // }
+      print(
+          '_imageLabels info - ${_imageLabel.imageLabel} , ${_imageLabel.confidence}');
+      _imageLabels.add(_imageLabel);
+    }
 
-  //   // categoryList = [];
-  //   // for (var i = 0; i < categories.length; i++) {
-  //   //   var cnt = products
-  //   //       .where((e) =>
-  //   //           e.catName.trim().toLowerCase() ==
-  //   //           categories[i].catName.trim().toLowerCase())
-  //   //       .toList()
-  //   //       .length;
-  //   //   if (cnt > 0) {
-  //   //     categoryList.add(categories[i]);
-  //   //   }
-  //   // }
+    if (_imageLabels.length > 0) {
+      _imageLabels.sort((a, b) {
+        var aConfidence = a.confidence;
+        var bConfidence = b.confidence;
+        return aConfidence.compareTo(bConfidence);
+      });
+    }
 
-  //   _initialGetInfo();
+    print('_imageLabels length - ${_imageLabels.length}');
 
-  //   super.didChangeDependencies();
-  // }
+    return _imageLabels[_imageLabels.length - 1].imageLabel;
+  }
 
   @override
-  void didChangeDependencies() {
-    print('check loc1 - did change');
-    _initialGetInfo();
+  void didChangeDependencies() async {
+    if (_connectionStatus) {
+      _initialGetInfo();
+    }
     super.didChangeDependencies();
   }
 
   void _initialGetInfo() {
     getCurrentLocation = Provider.of<GetCurrentLocation>(context);
-    print('check loc1 - ${getCurrentLocation.latitude}');
 
     if (getCurrentLocation.latitude != 0.0) {
       setState(() {
-        print('data is available for the app');
         _dataLoaded = true;
       });
     }
 
-    // getCurrentLocation.getCurrentPosition();
-
-    print('check loc2 - ${getCurrentLocation.latitude}');
     _setBuyingCountryCode();
     final categories = Provider.of<List<Category>>(context);
     products = Provider.of<List<Product>>(context);
@@ -198,6 +196,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     }
 
     categoryList = [];
+
     for (var i = 0; i < categories.length; i++) {
       var cnt = products
           .where((e) =>
@@ -226,11 +225,28 @@ class _ExploreScreenState extends State<ExploreScreen> {
             if (userData[0].buyingCountryCode != null) {
               _countryCode = userData[0].buyingCountryCode;
             }
-            print('userupdate - explore');
           }
         }
       }
     }
+  }
+
+  _checkConnectivity() async {
+    var connectivityStatus = await ConnectivityCheck.connectivity();
+    if (connectivityStatus == "WifiInternet" ||
+        connectivityStatus == "MobileInternet") {
+      getCurrentLocation =
+          Provider.of<GetCurrentLocation>(context, listen: false);
+      getCurrentLocation.getCurrentPosition();
+
+      LoadMlModel.loadModel();
+      setState(() {
+        _connectionStatus = true;
+      });
+    } else {
+      _connectionStatus = false;
+    }
+    print("Connectivity Status = ${connectivityStatus}");
   }
 
   @override
@@ -240,19 +256,24 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print('check loc1 - new explore');
-    print('userupdate - explore widget');
     final _appBarRow = Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
-          flex: 9,
+          flex: 10,
           child: Container(
-            height: (MediaQuery.of(context).size.height) / 17,
+            height: (MediaQuery.of(context).size.height) / 19,
             decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius: BorderRadius.circular(24.0),
-            ),
+                color: bBackgroundColor,
+                borderRadius: BorderRadius.all(
+                  Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey,
+                    blurRadius: 2.0,
+                  ),
+                ]),
             child: Row(
               children: [
                 Expanded(
@@ -265,7 +286,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     },
                     icon: Icon(
                       Icons.search,
-                      color: Theme.of(context).disabledColor,
+                      color: bDisabledColor,
                     ),
                   ),
                 ),
@@ -276,7 +297,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     },
                     icon: Icon(
                       Icons.camera_alt_outlined,
-                      color: Theme.of(context).disabledColor,
+                      color: bDisabledColor,
                     ),
                   ),
                 ),
@@ -286,117 +307,55 @@ class _ExploreScreenState extends State<ExploreScreen> {
         ),
         Expanded(
           flex: 1,
-          child: Flag(
-              _countryCode.isEmpty
-                  ? getCurrentLocation.countryCode
-                  : _countryCode,
-              height: 25,
-              fit: BoxFit.fill),
+          child: Container(
+            padding: EdgeInsets.only(left: 5),
+            child: Flag(
+                _countryCode.isEmpty
+                    ? getCurrentLocation.countryCode
+                    : _countryCode,
+                height: 25,
+                fit: BoxFit.fill),
+          ),
         ),
       ],
     );
+
     final _pageBody = SafeArea(
       child: _dataLoaded
           ? Column(
               children: [
-                Expanded(
-                  flex: 1,
-                  child: Container(
-                    color: Colors.white,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Flexible(
-                          flex: 1,
-                          child: Container(
-                            width: MediaQuery.of(context).size.width / 4,
-                            child: FlutterSwitch(
-                              width: MediaQuery.of(context).size.width / 5,
-                              activeColor: Theme.of(context).primaryColor,
-                              inactiveColor: Theme.of(context).primaryColor,
-                              activeText: 'New',
-                              inactiveText: 'Used',
-                              value: status,
-                              showOnOff: true,
-                              onToggle: (val) {
-                                setState(() {
-                                  status = val;
-                                  if (status == true) {
-                                    _prodCondition = 'New';
-                                  } else {
-                                    _prodCondition = 'Used';
-                                  }
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                        Flexible(
-                            flex: 1,
-                            child: Container(
-                              width: MediaQuery.of(context).size.width / 4,
-                              child: GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) {
-                                          return MotorFilterScreen();
-                                        },
-                                        fullscreenDialog: true),
-                                  );
-                                },
-                                child: Row(
-                                  children: [
-                                    Flexible(
-                                      flex: 1,
-                                      child: Icon(
-                                        CupertinoIcons.slider_horizontal_3,
-                                        color: Theme.of(context).primaryColor,
-                                      ),
-                                    ),
-                                    Flexible(
-                                      flex: 1,
-                                      child: SizedBox(
-                                        width: 10,
-                                      ),
-                                    ),
-                                    Flexible(
-                                      flex: 3,
-                                      child: Text(
-                                        'Filters',
-                                        style: TextStyle(
-                                          color: Theme.of(context).primaryColor,
-                                        ),
-                                      ),
-                                    )
-                                  ],
-                                ),
-                              ),
-                            )),
-                      ],
-                    ),
-                  ),
-                ),
                 Expanded(
                   flex: 10,
                   child: TabBarView(
                     controller: _tabController,
                     children:
                         List<Widget>.generate(categoryList.length, (index) {
-                      // setState(() {
-                      //   _catName = categoryList[index].catName;
-                      // });
                       return getCurrentLocation.addressLocation != ''
-                          ? Container(
-                              child: DisplayProductGrid(
-                                inCatName: categoryList[index].catName,
-                                inProdCondition: _prodCondition,
-                                inDisplayType: _displayType,
-                              ),
+                          ? Column(
+                              children: [
+                                Expanded(
+                                  flex: 9,
+                                  child: Container(
+                                    child: DisplayProductGrid(
+                                      inCatName: categoryList[index].catName,
+                                      inProdCondition: "",
+                                      inDisplayType: _displayType,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             )
                           : Center(
-                              child: CircularProgressIndicator(),
+                              child: Column(
+                                children: [
+                                  Text("Something went wrong!"),
+                                  TextButton(
+                                      onPressed: () {
+                                        setState(() {});
+                                      },
+                                      child: Text('Refresh'))
+                                ],
+                              ),
                             );
                     }),
                   ),
@@ -404,13 +363,19 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ],
             )
           : Center(
-              child: CircularProgressIndicator(),
+              child:
+                  // CupertinoActivityIndicator(),
+                  CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).scaffoldBackgroundColor),
+                backgroundColor: bPrimaryColor,
+              ),
             ),
     );
     final _appBar = AppBar(
-      backgroundColor: Theme.of(context).backgroundColor,
+      backgroundColor: bBackgroundColor,
       elevation: 0.0,
-      iconTheme: IconThemeData(color: Theme.of(context).disabledColor),
+      iconTheme: IconThemeData(color: bDisabledColor),
       title: _appBarRow,
       bottom: TabBar(
         controller: _tabController,
@@ -424,9 +389,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
           );
         }),
         isScrollable: true,
-        indicatorColor: Theme.of(context).primaryColor,
-        labelColor: Theme.of(context).primaryColor,
-        unselectedLabelColor: Theme.of(context).disabledColor,
+        indicatorColor: bPrimaryColor,
+        labelColor: bPrimaryColor,
+        unselectedLabelColor: bDisabledColor,
       ),
     );
 
@@ -456,6 +421,7 @@ class ItemsSearch extends SearchDelegate<String> {
   String _text = '';
   double _confidence = 1.0;
   bool available = false;
+  bool _isListening = false;
 
   void _initSpeech() async {
     _speech = stt.SpeechToText();
@@ -470,22 +436,133 @@ class ItemsSearch extends SearchDelegate<String> {
     );
   }
 
-  void _listen(BuildContext context) {
-    if (available) {
-      _speech.listen(onResult: (val) {
-        _text = val.recognizedWords;
-        _listeningState = val.finalResult;
+  void _showListenDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              content: Container(
+                height: MediaQuery.of(context).size.height / 3,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Text("Name of the product"),
+                    ),
+                    Expanded(
+                      child: AvatarGlow(
+                        animate: _isListening,
+                        glowColor: bPrimaryColor,
+                        endRadius: 75.0,
+                        duration: const Duration(milliseconds: 2000),
+                        repeatPauseDuration: const Duration(milliseconds: 100),
+                        repeat: true,
+                        child: FloatingActionButton(
+                          backgroundColor: bPrimaryColor,
+                          onPressed: () async {
+                            // _listen(context);
+                            print('check 1 - $_isListening');
+                            if (!_isListening) {
+                              print('check 2 - $_isListening');
+                              available = await _speech.initialize(
+                                onStatus: (val) {
+                                  print('onStatus: $val');
+                                },
+                                onError: (val) {
+                                  print('onErrorss: $val');
+                                },
+                              );
+                              print('check 3 - $_isListening - $available');
+                              if (available) {
+                                setState(() {
+                                  _isListening = true;
+                                });
+                                print("checking1");
+                                _speech.listen(
+                                  onResult: (val) {
+                                    print("checking2 - ${val.confidence}");
+                                    _text = val.recognizedWords;
 
-        if (val.hasConfidenceRating && val.confidence > 0) {
-          _confidence = val.confidence;
-        }
+                                    _listeningState = val.finalResult;
 
-        if (_listeningState == true) {
-          query = _text;
-          Navigator.of(context)
-              .pushNamed(SearchResults.routeName, arguments: query);
-        }
-      });
+                                    if (val.hasConfidenceRating &&
+                                        val.confidence > 0) {
+                                      _confidence = val.confidence;
+                                    }
+
+                                    if (_listeningState == true) {
+                                      setState(() {
+                                        query = _text;
+
+                                        _isListening = false;
+                                      });
+
+                                      print("checking audio1 - $query");
+                                      // Future.delayed(Duration(seconds: 1), () {
+                                      Navigator.of(context).pop();
+
+                                      Navigator.of(context).pushNamed(
+                                          SearchResults.routeName,
+                                          arguments: query);
+                                      // });
+                                    }
+                                  },
+                                );
+                              }
+                            } else {
+                              setState(() {
+                                _isListening = false;
+                              });
+                              _speech.stop();
+                            }
+                          },
+                          child: Icon(
+                            _isListening ? Icons.mic : Icons.mic_none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Text(query))
+                  ],
+                ),
+              ),
+              actions: <Widget>[],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _listen(BuildContext context) async {
+    if (!_isListening) {
+      available = await _speech.initialize(
+        onStatus: (val) {
+          print('onStatus: $val');
+        },
+        onError: (val) {
+          print('onError: $val');
+        },
+      );
+      if (available) {
+        _speech.listen(onResult: (val) {
+          _text = val.recognizedWords;
+
+          _listeningState = val.finalResult;
+
+          if (val.hasConfidenceRating && val.confidence > 0) {
+            _confidence = val.confidence;
+          }
+
+          if (_listeningState == true) {
+            query = _text;
+            print("checking audio - $query");
+            Navigator.of(context)
+                .pushNamed(SearchResults.routeName, arguments: query);
+          } else {}
+        });
+      }
     }
   }
 
@@ -495,15 +572,14 @@ class ItemsSearch extends SearchDelegate<String> {
     pickedImage = File(imageFile.path);
 
     if (pickedImage != null) {
-      prodName = await runModelOnImageS(); // It is run with tflite model
-      // prodName = await findLabels(
-      //     pickedImage); // It is run with google ml vision model
+      // prodName = await runModelOnImageS(); // It is to run with tflite model
+      prodName = await findLabels(
+          pickedImage); // It is to run with google ml vision model
     }
     return prodName;
   }
 
   Future<String> findLabels(File _image) async {
-    print('image labeling1');
     List<ImageLabelInfo> _imageLabels = [];
     final GoogleVisionImage visionImage = GoogleVisionImage.fromFile(_image);
 
@@ -518,8 +594,6 @@ class ItemsSearch extends SearchDelegate<String> {
       _imageLabel.confidence = label.confidence;
 
       _imageLabels.add(_imageLabel);
-
-      print('image label : ${_imageLabel.imageLabel}, ${label.confidence}');
     }
 
     if (_imageLabels.length > 0) {
@@ -529,9 +603,6 @@ class ItemsSearch extends SearchDelegate<String> {
         return aConfidence.compareTo(bConfidence);
       });
     }
-
-    print(
-        'image label last: ${_imageLabels[_imageLabels.length - 1].imageLabel}');
 
     return _imageLabels[_imageLabels.length - 1].imageLabel;
   }
@@ -546,18 +617,15 @@ class ItemsSearch extends SearchDelegate<String> {
     );
 
     imageLabelS = output[0]["label"];
-    print('image labels - $imageLabelS');
 
     var imageLabelOut =
         imageLabelS.split(" ")[1] + " " + imageLabelS.split(" ")[2];
 
-    print('image labels  out- $imageLabelOut');
     return imageLabelOut;
   }
 
   @override
   List<Widget> buildActions(BuildContext context) {
-    _initSpeech();
     return [
       query != ""
           ? IconButton(
@@ -569,7 +637,11 @@ class ItemsSearch extends SearchDelegate<String> {
           : IconButton(
               icon: Icon(Icons.mic),
               onPressed: () {
-                _listen(context);
+                _initSpeech();
+                // _speech = stt.SpeechToText();
+
+                // _listen(context);
+                _showListenDialog(context);
               },
             ),
       IconButton(
@@ -598,8 +670,20 @@ class ItemsSearch extends SearchDelegate<String> {
   Widget buildResults(BuildContext context) {
     final prodList = products
         .where((p) =>
-            (p.prodName.toLowerCase()).contains(selectedItem.toLowerCase()) ||
-            (p.catName.toLowerCase()).contains(selectedItem.toLowerCase()))
+            (p.prodName.toLowerCase().trim())
+                .contains(selectedItem.toLowerCase().trim()) ||
+            (p.catName.toLowerCase().trim())
+                .contains(selectedItem.toLowerCase().trim()) ||
+            (p.subCatType.toLowerCase().trim())
+                .contains(selectedItem.toLowerCase().trim()) ||
+            (p.prodDes.toLowerCase().trim())
+                .contains(selectedItem.toLowerCase().trim()) ||
+            (p.sellerNotes.toLowerCase().trim())
+                .contains(selectedItem.toLowerCase().trim()) ||
+            (p.make.toLowerCase().trim())
+                .contains(selectedItem.toLowerCase().trim()) ||
+            (p.model.toLowerCase().trim())
+                .contains(selectedItem.toLowerCase().trim()))
         .toList();
 
     return GridView.builder(
@@ -625,7 +709,7 @@ class ItemsSearch extends SearchDelegate<String> {
                           fit: BoxFit.fill,
                         )
                       : Center(
-                          child: CircularProgressIndicator(),
+                          child: CupertinoActivityIndicator(),
                         ),
                 ),
               ),
@@ -649,8 +733,20 @@ class ItemsSearch extends SearchDelegate<String> {
         ? []
         : products
             .where((p) =>
-                (p.prodName.toLowerCase()).contains(query.toLowerCase()) ||
-                (p.catName.toLowerCase()).contains(query.toLowerCase()))
+                (p.prodName.toLowerCase().trim())
+                    .contains(query.toLowerCase().trim()) ||
+                (p.catName.toLowerCase().trim())
+                    .contains(query.toLowerCase().trim()) ||
+                (p.subCatType.toLowerCase().trim())
+                    .contains(query.toLowerCase().trim()) ||
+                (p.prodDes.toLowerCase().trim())
+                    .contains(query.toLowerCase().trim()) ||
+                (p.sellerNotes.toLowerCase().trim())
+                    .contains(query.toLowerCase().trim()) ||
+                (p.make.toLowerCase().trim())
+                    .contains(query.toLowerCase().trim()) ||
+                (p.model.toLowerCase().trim())
+                    .contains(query.toLowerCase().trim()))
             .toList();
     return myList.isEmpty
         ? Container(

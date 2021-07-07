@@ -1,19 +1,25 @@
+//Imports for pubspec Packages
 import 'package:badges/badges.dart';
-import 'package:blrber/models/message.dart';
-import 'package:blrber/models/user_detail.dart';
-import 'package:blrber/screens/generate_post.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-// Import screens
-import './explore_screen.dart';
-import './favorites_screen.dart';
-import './chat_screen.dart';
-import './profile_screen.dart';
+// Imports for Constants
+import '../constants.dart';
 
-// Import services
+// Imports for Models
+import '../models/message.dart';
+import '../models/user_detail.dart';
+
+// Imports for Screens
+import '../screens/explore_screen.dart';
+import '../screens/favorites_screen.dart';
+import '../screens/chat_screen.dart';
+import '../screens/profile_screen.dart';
+import '../screens/generate_post.dart';
+
+// Imports for Services
 import '../services/foundation.dart';
 
 class TabsScreen extends StatefulWidget {
@@ -56,16 +62,16 @@ class _TabsScreenState extends State<TabsScreen> {
         Provider.of<List<ReceivedMsgCount>>(context);
 
     final _bottomNavigationBarItems = [
-      BottomNavigationBarItem(
-        icon: Icon(Icons.explore),
+      const BottomNavigationBarItem(
+        icon: const Icon(Icons.explore),
         label: 'Explore',
       ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.favorite),
+      const BottomNavigationBarItem(
+        icon: const Icon(Icons.favorite),
         label: 'Favorites',
       ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.add_box),
+      const BottomNavigationBarItem(
+        icon: const Icon(Icons.add_box),
         label: 'Sell',
       ),
       BottomNavigationBarItem(
@@ -76,21 +82,13 @@ class _TabsScreenState extends State<TabsScreen> {
                 user = FirebaseAuth.instance.currentUser;
                 List<UserDetail> userDetails =
                     Provider.of<List<UserDetail>>(context);
-                print('user id in tab - ${user.uid}');
-                print('user email in tab - ${user.email}');
-                print('userDetails.length - ${userDetails.length}');
-                print('user email in tab11 - ${user.email}');
 
                 if (userDetails.length > 0 && user != null) {
-                  print('check tabs screen');
                   // UserDetail userDetailsCU = UserDetail();
-                  print('check tabs screen1');
+
                   var userDetail = userDetails
                       .where((e) => e.email.trim() == user.email.trim())
                       .toList();
-                  print('check tabs screen2 - ${userDetail.length}');
-
-                  print('user email in tab1 - ${user.email}');
 
                   if (userDetail.length > 0) {
                     receivedMsgCounts = receivedMsgCounts
@@ -107,43 +105,49 @@ class _TabsScreenState extends State<TabsScreen> {
                     }
                   } else {
                     totalNewMsgCount = 0;
+                    // Following signOut is to sign out the used if he is deleted from the firebase manually.
+                    // But it is not allowed to deleted the user manually if he is logged in.
                     FirebaseAuth.instance.signOut();
-                    print('user email in tab2 - ${user.email}');
                   }
                 }
                 return Stack(
                   children: [
-                    Icon(Icons.chat),
+                    const Icon(Icons.chat),
                     if (totalNewMsgCount > 0)
                       Positioned(
-                        left: 5,
+                        left: 0,
                         top: 0,
-                        child: Badge(
-                          badgeContent: Text(
-                            totalNewMsgCount.toString(),
-                            style: TextStyle(color: Colors.white),
+                        child: Container(
+                          height: 22,
+                          width: 22,
+                          child: Badge(
+                            badgeContent: Text(
+                              totalNewMsgCount.toString(),
+                              style: TextStyle(
+                                  color: bBackgroundColor, fontSize: 9),
+                            ),
+                            badgeColor: Colors.red,
                           ),
-                          badgeColor: Colors.red,
                         ),
                       )
                   ],
                 );
               } else {
-                return Icon(Icons.chat);
+                return const Icon(Icons.chat);
               }
             }),
         label: 'Chat',
       ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.person),
+      const BottomNavigationBarItem(
+        icon: const Icon(Icons.person),
         label: 'My Blrber',
       ),
     ];
     final _bottomNavigationBar = BottomNavigationBar(
       onTap: _selectPage,
-      unselectedItemColor: Theme.of(context).disabledColor,
-      selectedItemColor: Theme.of(context).primaryColor,
-      backgroundColor: Theme.of(context).backgroundColor,
+      unselectedItemColor: bDisabledColor,
+      selectedItemColor: bPrimaryColor,
+      backgroundColor: bBackgroundColor,
       currentIndex: _selectPageIndex,
       type: BottomNavigationBarType.fixed,
       items: _bottomNavigationBarItems,

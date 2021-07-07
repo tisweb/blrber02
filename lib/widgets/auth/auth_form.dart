@@ -1,10 +1,18 @@
-import 'package:blrber/models/company_detail.dart';
-import 'package:blrber/models/user_detail.dart';
+//Imports for pubspec Packages
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import 'package:blrber/services/email_auth_custom.dart';
 import 'package:flutter_signin_button/flutter_signin_button.dart';
+
+//Imports for Models
+import '../../services/email_auth_custom.dart';
+
+//Imports for Models
+import '../../models/company_detail.dart';
+import '../../models/user_detail.dart';
+
+//Imports for Constants
+import '../../constants.dart';
 
 class AuthForm extends StatefulWidget {
   AuthForm(
@@ -26,7 +34,7 @@ class AuthForm extends StatefulWidget {
   _AuthFormState createState() => _AuthFormState();
 }
 
-class _AuthFormState extends State<AuthForm> {
+class _AuthFormState extends State<AuthForm> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   var _isLogin = true;
   var _userEmail = '';
@@ -40,8 +48,28 @@ class _AuthFormState extends State<AuthForm> {
   final TextEditingController _emailcontroller = TextEditingController();
   final TextEditingController _otpcontroller = TextEditingController();
 
-  TextEditingController _password = TextEditingController();
-  TextEditingController _confirmpassword = TextEditingController();
+  final TextEditingController _password = TextEditingController();
+  final TextEditingController _confirmpassword = TextEditingController();
+
+  AnimationController animationController;
+  @override
+  void dispose() {
+    animationController.dispose();
+    _emailcontroller.dispose();
+    _otpcontroller.dispose();
+    _password.dispose();
+    _confirmpassword.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    animationController = new AnimationController(
+        duration: const Duration(seconds: 2), vsync: this);
+    animationController.repeat();
+  }
 
   ///a void function to verify if the Data provided is true
   void verify() {
@@ -120,14 +148,16 @@ class _AuthFormState extends State<AuthForm> {
   }
 
   void _googleLoginSubmit() {
-    widget.submitFn(
-      _userEmail.trim(),
-      _userPassword.trim(),
-      _userName.trim(),
-      _isLogin,
-      'google',
-      context,
-    );
+    if (_emailcontroller.text.isEmpty) {
+      widget.submitFn(
+        _userEmail.trim(),
+        _userPassword.trim(),
+        _userName.trim(),
+        _isLogin,
+        'google',
+        context,
+      );
+    }
   }
 
   @override
@@ -140,10 +170,6 @@ class _AuthFormState extends State<AuthForm> {
       _isVerifiedEmail = "";
       submitValid = false;
     }
-
-    print('_isVerified - $_isVerified');
-    print('_isVerifiedEmail - $_isVerifiedEmail');
-    print('submitValid - $submitValid');
 
     return companyDetails.length > 0
         ? Container(
@@ -158,7 +184,7 @@ class _AuthFormState extends State<AuthForm> {
                           NetworkImage(companyDetails[0].logoImageUrl),
                     ),
                   if (companyDetails[0].logoImageUrl == null)
-                    CircleAvatar(
+                    const CircleAvatar(
                       radius: 80,
                       backgroundColor: Colors.grey,
                       backgroundImage:
@@ -182,14 +208,25 @@ class _AuthFormState extends State<AuthForm> {
                                         r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
                                     .hasMatch(value)) {
                                   return 'Please a valid Email';
-                                } else if (userDetails != null && !_isLogin) {
+                                } else if (userDetails != null) {
                                   userDetails = userDetails
                                       .where((e) =>
                                           e.email.trim().toLowerCase() ==
                                           value.trim().toLowerCase())
                                       .toList();
-                                  if (userDetails.length > 0) {
-                                    return 'User Email Already exist';
+                                  if (!_isLogin) {
+                                    if (userDetails.length > 0) {
+                                      return 'User Email Already exist';
+                                    }
+                                  } else {
+                                    if (userDetails.length == 0) {
+                                      return 'User not registered';
+                                    } else {
+                                      if (userDetails[0].providerId !=
+                                          "password") {
+                                        return "This user already Signed in with Google!";
+                                      }
+                                    }
                                   }
                                 }
                                 return null;
@@ -199,7 +236,7 @@ class _AuthFormState extends State<AuthForm> {
                                 labelText: 'Email address',
                                 icon: Icon(
                                   Icons.mail,
-                                  color: Theme.of(context).primaryColor,
+                                  color: bPrimaryColor,
                                 ),
                               ),
                               onSaved: (value) {
@@ -230,7 +267,7 @@ class _AuthFormState extends State<AuthForm> {
                                 labelText: 'Username',
                                 icon: Icon(
                                   Icons.person,
-                                  color: Theme.of(context).primaryColor,
+                                  color: bPrimaryColor,
                                 ),
                               ),
                               onSaved: (value) {
@@ -244,7 +281,7 @@ class _AuthFormState extends State<AuthForm> {
                               key: ValueKey('password'),
                               validator: (value) {
                                 if (value.isEmpty || value.length < 7) {
-                                  return 'Please must be at lease 7 characters long.';
+                                  return 'Password must be at lease 7 characters long.';
                                 }
                                 return null;
                               },
@@ -252,7 +289,7 @@ class _AuthFormState extends State<AuthForm> {
                                 labelText: 'Password',
                                 icon: Icon(
                                   Icons.lock,
-                                  color: Theme.of(context).primaryColor,
+                                  color: bPrimaryColor,
                                 ),
                               ),
                               onSaved: (value) {
@@ -270,7 +307,7 @@ class _AuthFormState extends State<AuthForm> {
                                 labelText: 'Confirm Password',
                                 icon: Icon(
                                   Icons.lock,
-                                  color: Theme.of(context).primaryColor,
+                                  color: bPrimaryColor,
                                 ),
                               ),
                               validator: (String value) {
@@ -302,7 +339,7 @@ class _AuthFormState extends State<AuthForm> {
                                         labelText: 'Enter OTP from email',
                                         icon: Icon(
                                           Icons.confirmation_num,
-                                          color: Theme.of(context).primaryColor,
+                                          color: bPrimaryColor,
                                         ),
                                       ),
                                       validator: (String value) {
@@ -315,9 +352,10 @@ class _AuthFormState extends State<AuthForm> {
                                   ),
                                   if (_isVerified == 'no')
                                     Container(
-                                      child: Text(
+                                      child: const Text(
                                         'Validation Failed, Please check OTP!',
-                                        style: TextStyle(color: Colors.red),
+                                        style:
+                                            const TextStyle(color: Colors.red),
                                       ),
                                     ),
                                   Container(
@@ -327,16 +365,27 @@ class _AuthFormState extends State<AuthForm> {
                                       onPressed: () {
                                         _reSet();
                                       },
-                                      child: Text('Reset'),
+                                      child: const Text('Reset'),
                                     ),
                                   )
                                 ],
                               ),
                             ),
                           if (_signUpState == 'sendingotp')
-                            CircularProgressIndicator(),
-                          SizedBox(height: 12),
-                          if (widget.isLoading) CircularProgressIndicator(),
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  bScaffoldBackgroundColor),
+                              backgroundColor: bPrimaryColor,
+                            ),
+                          const SizedBox(height: 12),
+                          if (widget.isLoading)
+                            CircularProgressIndicator(
+                              // valueColor: animationController.drive(ColorTween(
+                              //     begin: Colors.blueAccent, end: Colors.red)),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  Theme.of(context).scaffoldBackgroundColor),
+                              backgroundColor: bPrimaryColor,
+                            ),
                           if (!widget.isLoading)
                             ElevatedButton.icon(
                               style: ButtonStyle(
@@ -367,7 +416,7 @@ class _AuthFormState extends State<AuthForm> {
                                 });
                               },
                             ),
-                          SizedBox(height: 12),
+                          const SizedBox(height: 12),
                           if (_isLogin)
                             SignInButton(
                               Buttons.GoogleDark,
@@ -383,7 +432,7 @@ class _AuthFormState extends State<AuthForm> {
           )
         : Container(
             child: Center(
-              child: CircularProgressIndicator(),
+              child: CupertinoActivityIndicator(),
             ),
           );
   }

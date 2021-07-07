@@ -1,7 +1,6 @@
 import 'package:blrber/models/company_detail.dart';
 import 'package:blrber/models/message.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/category.dart';
 import '../models/product.dart';
@@ -19,7 +18,7 @@ class Database {
             .map((DocumentSnapshot documentSnapshot) => Product(
                   prodName: documentSnapshot.data()["prodName"],
                   catName: documentSnapshot.data()["catName"],
-                  subCatDocId: documentSnapshot.data()["subCatDocId"],
+                  subCatType: documentSnapshot.data()["subCatType"],
                   prodDes: documentSnapshot.data()["prodDes"],
                   sellerNotes: documentSnapshot.data()["sellerNotes"],
                   year: documentSnapshot.data()["year"],
@@ -41,6 +40,7 @@ class Database {
                   status: documentSnapshot.data()["status"],
                   forSaleBy: documentSnapshot.data()["forSaleBy"],
                   listingStatus: documentSnapshot.data()["listingStatus"],
+                  typeOfAd: documentSnapshot.data()["typeOfAd"],
                   createdAt: documentSnapshot.data()["createdAt"],
                 ))
             .toList());
@@ -57,6 +57,7 @@ class Database {
                   make: documentSnapshot.data()["make"],
                   model: documentSnapshot.data()["model"],
                   vehicleType: documentSnapshot.data()["vehicleType"],
+                  vehicleTypeYear: documentSnapshot.data()["vehicleTypeYear"],
                   mileage: documentSnapshot.data()["mileage"],
                   vin: documentSnapshot.data()["vin"],
                   engine: documentSnapshot.data()["engine"],
@@ -103,6 +104,7 @@ class Database {
                   email: documentSnapshot.data()["email"],
                   userImageUrl: documentSnapshot.data()["userImageUrl"],
                   displayName: documentSnapshot.data()["displayName"],
+                  providerId: documentSnapshot.data()["providerId"],
                   addressLocation: documentSnapshot.data()["addressLocation"],
                   countryCode: documentSnapshot.data()["countryCode"],
                   buyingCountryCode:
@@ -118,36 +120,6 @@ class Database {
                   userDetailDocId: documentSnapshot.id,
                 ))
             .toList());
-  }
-
-  Stream<UserDetail> get userDetailSpecific {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      return _fireStore
-          .collection('userDetails')
-          .doc(user.uid)
-          .snapshots()
-          .map((DocumentSnapshot documentSnapshot) => UserDetail(
-                userName: documentSnapshot.data()["userName"],
-                email: documentSnapshot.data()["email"],
-                userImageUrl: documentSnapshot.data()["userImageUrl"],
-                displayName: documentSnapshot.data()["displayName"],
-                addressLocation: documentSnapshot.data()["addressLocation"],
-                countryCode: documentSnapshot.data()["countryCode"],
-                buyingCountryCode: documentSnapshot.data()["buyingCountryCode"],
-                latitude: documentSnapshot.data()["latitude"],
-                longitude: documentSnapshot.data()["longitude"],
-                phoneNumber: documentSnapshot.data()["phoneNumber"],
-                alternateNumber: documentSnapshot.data()["alternateNumber"],
-                userType: documentSnapshot.data()["userType"],
-                licenceNumber: documentSnapshot.data()["licenceNumber"],
-                companyName: documentSnapshot.data()["companyName"],
-                companyLogoUrl: documentSnapshot.data()["companyLogoUrl"],
-                userDetailDocId: documentSnapshot.id,
-              ));
-    } else {
-      return null;
-    }
   }
 
   Stream<List<CompanyDetail>> get companyDetails {
@@ -268,6 +240,19 @@ class Database {
             .toList());
   }
 
+  //type of ad
+
+  Stream<List<TypeOfAd>> get typeOfAds {
+    return _fireStore
+        .collection('typeOfAd')
+        .snapshots()
+        .map((QuerySnapshot querySnapshot) => querySnapshot.docs
+            .map((DocumentSnapshot documentSnapshot) => TypeOfAd(
+                  typeOfAd: documentSnapshot.data()["typeOfAd"],
+                ))
+            .toList());
+  }
+
   //forSaleBy
 
   Stream<List<ForSaleBy>> get forSaleBys {
@@ -294,16 +279,81 @@ class Database {
             .toList());
   }
 
-  Stream<List<Year>> get years {
+  //Vehivle Type
+
+  Stream<List<VehicleType>> get vehicleTypes {
     return _fireStore
-        .collection('years')
+        .collection('vehicleType')
         .snapshots()
         .map((QuerySnapshot querySnapshot) => querySnapshot.docs
-            .map((DocumentSnapshot documentSnapshot) => Year(
-                  year: documentSnapshot.data()["year"],
+            .map((DocumentSnapshot documentSnapshot) => VehicleType(
+                  vehicleType: documentSnapshot.data()["vehicleType"],
                 ))
             .toList());
   }
+
+  //Sub Model
+
+  Stream<List<SubModel>> get subModels {
+    return _fireStore
+        .collection('subModel')
+        .snapshots()
+        .map((QuerySnapshot querySnapshot) => querySnapshot.docs
+            .map((DocumentSnapshot documentSnapshot) => SubModel(
+                  subModel: documentSnapshot.data()["subModel"],
+                ))
+            .toList());
+  }
+
+  //driveType
+
+  Stream<List<DriveType>> get driveTypes {
+    return _fireStore
+        .collection('driveType')
+        .snapshots()
+        .map((QuerySnapshot querySnapshot) => querySnapshot.docs
+            .map((DocumentSnapshot documentSnapshot) => DriveType(
+                  driveType: documentSnapshot.data()["driveType"],
+                ))
+            .toList());
+  }
+
+  //bodyType
+
+  Stream<List<BodyType>> get bodyTypes {
+    return _fireStore
+        .collection('bodyType')
+        .snapshots()
+        .map((QuerySnapshot querySnapshot) => querySnapshot.docs
+            .map((DocumentSnapshot documentSnapshot) => BodyType(
+                  bodyType: documentSnapshot.data()["bodyType"],
+                ))
+            .toList());
+  }
+
+  //transmission
+
+  Stream<List<Transmission>> get transmissions {
+    return _fireStore
+        .collection('transmission')
+        .snapshots()
+        .map((QuerySnapshot querySnapshot) => querySnapshot.docs
+            .map((DocumentSnapshot documentSnapshot) => Transmission(
+                  transmission: documentSnapshot.data()["transmission"],
+                ))
+            .toList());
+  }
+
+  // Stream<List<Year>> get years {
+  //   return _fireStore
+  //       .collection('years')
+  //       .snapshots()
+  //       .map((QuerySnapshot querySnapshot) => querySnapshot.docs
+  //           .map((DocumentSnapshot documentSnapshot) => Year(
+  //                 year: documentSnapshot.data()["year"],
+  //               ))
+  //           .toList());
+  // }
 
   Stream<List<Make>> get makes {
     return _fireStore
@@ -312,6 +362,7 @@ class Database {
         .map((QuerySnapshot querySnapshot) => querySnapshot.docs
             .map((DocumentSnapshot documentSnapshot) => Make(
                   make: documentSnapshot.data()["make"],
+                  subCatType: documentSnapshot.data()["subCatType"],
                 ))
             .toList());
   }
@@ -323,6 +374,8 @@ class Database {
         .map((QuerySnapshot querySnapshot) => querySnapshot.docs
             .map((DocumentSnapshot documentSnapshot) => Model(
                   model: documentSnapshot.data()["model"],
+                  make: documentSnapshot.data()["make"],
+                  subCatType: documentSnapshot.data()["subCatType"],
                 ))
             .toList());
   }
@@ -334,21 +387,6 @@ class Database {
         .map((QuerySnapshot querySnapshot) => querySnapshot.docs
             .map((DocumentSnapshot documentSnapshot) => UserType(
                   userType: documentSnapshot.data()["userType"],
-                ))
-            .toList());
-  }
-
-  Stream<List<TempProd>> get tempProd {
-    return _fireStore
-        .collection('tempproducts')
-        // .where('userId', isEqualTo: user.uid)
-        .snapshots()
-        .map((QuerySnapshot querySnapshot) => querySnapshot.docs
-            .map((DocumentSnapshot documentSnapshot) => TempProd(
-                  userId: documentSnapshot.data()["userId"],
-                  catName: documentSnapshot.data()["catName"],
-                  imageUrl: documentSnapshot.data()["imageUrl"],
-                  validation: documentSnapshot.data()["validation"],
                 ))
             .toList());
   }

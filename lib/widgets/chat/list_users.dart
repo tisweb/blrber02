@@ -1,12 +1,14 @@
 import 'package:blrber/models/message.dart';
 import 'package:blrber/models/user_detail.dart';
-import 'package:blrber/screens/user_chat_page.dart';
+import 'package:blrber/screens/user_chat_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:badges/badges.dart';
 
 import 'package:provider/provider.dart';
+
+import '../../constants.dart';
 
 class UserMsgCount {
   String userNameTo;
@@ -159,13 +161,13 @@ class _ListUsersState extends State<ListUsers> {
             itemCount: _userMsgCounts.length,
             itemBuilder: (ctx, index) => Column(
               children: [
-                SizedBox(
-                  height: 2,
+                Divider(
+                  thickness: 2,
                 ),
                 Container(
                   height: MediaQuery.of(context).size.height / 10,
                   child: ListTile(
-                    tileColor: Colors.white,
+                    tileColor: bBackgroundColor,
                     onTap: () {
                       _clearReceivedMsgCount(
                           _userMsgCounts[index].userNameFrom,
@@ -175,13 +177,14 @@ class _ListUsersState extends State<ListUsers> {
                         context,
                         MaterialPageRoute(
                             builder: (_) {
-                              return UserChatPage(
+                              return UserChatScreen(
                                 userNameFrom:
                                     _userMsgCounts[index].userNameFrom,
                                 userNameTo: _userMsgCounts[index].userNameTo,
                                 userIdFrom: _userMsgCounts[index].userIdFrom,
                                 userIdTo: _userMsgCounts[index].userIdTo,
                                 prodName: _userMsgCounts[index].prodName,
+                                imageUrlTo: _userMsgCounts[index].imageUrl,
                               );
                             },
                             fullscreenDialog: true),
@@ -200,7 +203,7 @@ class _ListUsersState extends State<ListUsers> {
                           Badge(
                             badgeContent: Text(
                               _userMsgCounts[index].newRecMsgCount.toString(),
-                              style: TextStyle(color: Colors.white),
+                              style: TextStyle(color: bBackgroundColor),
                             ),
                             badgeColor: Colors.red,
                           )

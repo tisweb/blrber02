@@ -2,6 +2,8 @@ import 'package:blrber/models/chat_detail.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../constants.dart';
+
 class MessageBubble extends StatefulWidget {
   final ChatDetail chatDetailsFromTo;
 
@@ -32,7 +34,7 @@ class _MessageBubbleState extends State<MessageBubble> {
           children: <Widget>[
             Container(
               decoration: BoxDecoration(
-                color: isMe ? Theme.of(context).primaryColor : Colors.white,
+                color: isMe ? bPrimaryColor : bBackgroundColor,
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(12),
                   topRight: Radius.circular(12),

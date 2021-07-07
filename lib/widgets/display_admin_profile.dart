@@ -1,12 +1,27 @@
-import 'package:blrber/models/user_detail.dart';
-import 'package:blrber/provider/get_current_location.dart';
-import 'package:blrber/screens/edit_profile.dart';
-import 'package:blrber/screens/settings_screen.dart';
-import 'package:blrber/widgets/display_product_catalog.dart';
+//Imports for pubspec Packages
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flag/flag.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+//Imports for Constants
+import '../constants.dart';
+
+//Imports for Models
+import '../models/user_detail.dart';
+
+//Imports for Providers
+import '../provider/get_current_location.dart';
+
+//Imports for Screens
+import '../screens/dashboard.dart';
+import '../screens/edit_profile.dart';
+import '../screens/customer_support.dart';
+import '../screens/settings_screen.dart';
+
+//Imports for Widgets
+import '../widgets/display_product_catalog.dart';
 
 class DisplayAdminProfile extends StatefulWidget {
   const DisplayAdminProfile({Key key}) : super(key: key);
@@ -16,14 +31,23 @@ class DisplayAdminProfile extends StatefulWidget {
 }
 
 class _DisplayAdminProfileState extends State<DisplayAdminProfile> {
+  List<UserDetail> userDetails = [];
+  List<AdminUser> adminUsers = [];
+  User user;
+  GetCurrentLocation getCurrentLocation = GetCurrentLocation();
   String currentUserName = "";
   AdminUser adminUser = AdminUser();
+  static const double flagHeight = 20.0;
+  static const double flagWidth = 25.0;
+
   @override
-  Widget build(BuildContext context) {
-    List<UserDetail> userDetails = Provider.of<List<UserDetail>>(context);
-    List<AdminUser> adminUsers = Provider.of<List<AdminUser>>(context);
-    final user = FirebaseAuth.instance.currentUser;
-    final getCurrentLocation = Provider.of<GetCurrentLocation>(context);
+  void didChangeDependencies() {
+    userDetails = [];
+    adminUsers = [];
+    userDetails = Provider.of<List<UserDetail>>(context);
+    adminUsers = Provider.of<List<AdminUser>>(context);
+    user = FirebaseAuth.instance.currentUser;
+    getCurrentLocation = Provider.of<GetCurrentLocation>(context);
 
     if (adminUsers.length > 0) {
       adminUsers =
@@ -38,130 +62,208 @@ class _DisplayAdminProfileState extends State<DisplayAdminProfile> {
         currentUserName = userDetails[0].userName;
       }
     }
+    super.didChangeDependencies();
+  }
 
-    return Scaffold(
-      body: userDetails.length > 0
-          ? Container(
-              child: Column(
-                children: [
-                  Container(
-                    color: Colors.white,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Flag(
-                          getCurrentLocation.countryCode,
-                          height: 20,
-                          width: 25,
-                          fit: BoxFit.fill,
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.settings),
-                          onPressed: () {
-                            Navigator.of(context)
-                                .pushNamed(SettingsScreen.routeName);
-                          },
-                        )
-                      ],
-                    ),
-                  ),
-                  Container(
-                    color: Colors.white,
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 25,
-                          backgroundImage: userDetails[0].userImageUrl == ""
-                              ? AssetImage(
-                                  'assets/images/default_user_image.png')
-                              : NetworkImage(userDetails[0].userImageUrl),
-                        ),
-                        SizedBox(
-                          width: 10,
-                        ),
-                        Container(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Text(
-                                userDetails[0].displayName,
-                                style: TextStyle(
-                                    fontSize: 20,
-                                    color: Theme.of(context).disabledColor),
-                              ),
-                              Text(
-                                userDetails[0].userType,
-                                style: TextStyle(
-                                    fontSize: 15,
-                                    color: Theme.of(context).disabledColor),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    height: 5,
-                  ),
-                  Container(
-                    color: Colors.white,
-                    child: ListTile(
-                      leading: Icon(Icons.edit),
-                      title: Text(
-                        'Edit Profile',
-                        style: TextStyle(
-                            fontSize: 18,
-                            color: Theme.of(context).disabledColor),
+  @override
+  Widget build(BuildContext context) {
+    return userDetails.length > 0
+        ? Container(
+            child: Column(
+              children: [
+                Container(
+                  color: bBackgroundColor,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Flag(
+                        getCurrentLocation.countryCode,
+                        height: flagHeight,
+                        width: flagWidth,
+                        fit: BoxFit.fill,
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) {
-                                return EditProfile();
-                              },
-                              fullscreenDialog: true),
-                        );
-                      },
-                    ),
+                      IconButton(
+                        icon: const Icon(Icons.settings),
+                        onPressed: () {
+                          Navigator.of(context)
+                              .pushNamed(SettingsScreen.routeName);
+                        },
+                      )
+                    ],
                   ),
-                  SizedBox(
-                    height: 5,
-                  ),
-                  Container(
-                    color: Colors.white,
-                    child: ListTile(
-                      leading: Icon(Icons.category_outlined),
-                      title: Text(
-                        'Product Catalog',
-                        style: TextStyle(
-                            fontSize: 18,
-                            color: Theme.of(context).disabledColor),
+                ),
+                const Divider(
+                  thickness: 2,
+                ),
+                Container(
+                  padding: EdgeInsets.only(left: 8),
+                  color: bBackgroundColor,
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 25,
+                        backgroundImage: userDetails[0].userImageUrl == ""
+                            ? AssetImage('assets/images/default_user_image.png')
+                            : NetworkImage(userDetails[0].userImageUrl),
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) {
-                                return DisplayProductCatalog(
-                                  adminUserPermission: adminUsers[0].permission,
-                                );
-                              },
-                              fullscreenDialog: true),
-                        );
-                      },
+                      const SizedBox(
+                        width: 10,
+                      ),
+                      Container(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Text(
+                              userDetails[0].displayName,
+                              style: TextStyle(
+                                  fontSize: 20, color: bDisabledColor),
+                            ),
+                            Text(
+                              userDetails[0].userType,
+                              style: TextStyle(
+                                  fontSize: 15, color: bDisabledColor),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(
+                  thickness: 2,
+                ),
+                Container(
+                  color: bBackgroundColor,
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.edit,
+                      color: bPrimaryColor,
                     ),
+                    title: const Text(
+                      'Edit Profile',
+                      style: TextStyle(fontSize: 18, color: bDisabledColor),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) {
+                              return EditProfile();
+                            },
+                            fullscreenDialog: true),
+                      );
+                    },
                   ),
-                  SizedBox(
-                    height: 5,
+                ),
+                const Divider(
+                  thickness: 2,
+                ),
+                Container(
+                  color: bBackgroundColor,
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.category_outlined,
+                      color: bPrimaryColor,
+                    ),
+                    title: const Text(
+                      'Product Catalog',
+                      style: TextStyle(fontSize: 18, color: bDisabledColor),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) {
+                              return DisplayProductCatalog(
+                                adminUserPermission: adminUsers[0].permission,
+                              );
+                            },
+                            fullscreenDialog: true),
+                      );
+                    },
                   ),
-                ],
-              ),
-            )
-          : Center(
-              child: CircularProgressIndicator(),
+                ),
+                const Divider(
+                  thickness: 2,
+                ),
+                Container(
+                  color: bBackgroundColor,
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.dashboard,
+                      color: bPrimaryColor,
+                    ),
+                    title: const Text(
+                      'Dashboard',
+                      style: TextStyle(fontSize: 18, color: bDisabledColor),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) {
+                              return Dashboard(
+                                adminUserPermission: adminUsers[0].permission,
+                              );
+                            },
+                            fullscreenDialog: true),
+                      );
+                    },
+                  ),
+                ),
+                const Divider(
+                  thickness: 2,
+                ),
+                Container(
+                  color: bBackgroundColor,
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.support_agent,
+                      color: bPrimaryColor,
+                    ),
+                    title: const Text(
+                      'Customer Support',
+                      style: TextStyle(fontSize: 18, color: bDisabledColor),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) {
+                              return CustomerSupport();
+                            },
+                            fullscreenDialog: true),
+                      );
+                    },
+                  ),
+                ),
+                const Divider(
+                  thickness: 2,
+                ),
+                Container(
+                  color: bBackgroundColor,
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.settings,
+                      color: bPrimaryColor,
+                    ),
+                    title: const Text(
+                      'Settings',
+                      style: TextStyle(fontSize: 18, color: bDisabledColor),
+                    ),
+                    onTap: () {
+                      Navigator.of(context).pushNamed(SettingsScreen.routeName);
+                    },
+                  ),
+                ),
+                const Divider(
+                  thickness: 2,
+                ),
+              ],
             ),
-    );
+          )
+        : const Center(
+            child: CupertinoActivityIndicator(),
+          );
   }
 }

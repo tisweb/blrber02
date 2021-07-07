@@ -1,22 +1,32 @@
+//Imports for pubspec Packages
 import 'package:badges/badges.dart';
-import 'package:blrber/provider/get_current_location.dart';
-
-import 'package:blrber/screens/gmap_screen.dart';
-import 'package:blrber/screens/photos.dart';
-
-import 'package:blrber/screens/user_post_catalog.dart';
-import 'package:blrber/screens/view_full_specs.dart';
-import 'package:blrber/screens/view_photos.dart';
-import 'package:blrber/widgets/chat/to_chat.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:share/share.dart';
+
+//Imports for pubspec Constants
+import '../constants.dart';
+
+//Imports for pubspec Models
 import '../models/product.dart';
 import '../models/user_detail.dart';
 
-import '../services/foundation.dart';
+//Imports for pubspec Screens
+import '../screens/auth_screen.dart';
+import '../screens/gmap_screen.dart';
+import '../screens/main_link.dart';
+import '../screens/photos.dart';
+import '../screens/product_detail_screen.dart';
+import '../screens/user_post_catalog.dart';
+import '../screens/view_full_specs.dart';
+import '../screens/view_photos.dart';
+
+//Imports for pubspec Widgets
+import '../widgets/chat/to_chat.dart';
 
 class ProductDetailItem extends StatefulWidget {
   final String productDocId;
@@ -32,14 +42,16 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
   bool _catCar = false;
   bool dataAvailable = false;
 
-  String _currencySymbol = "";
-  String _currencyName = "";
   String userId = "";
+  bool isFavorite = false;
   List<CtmSpecialInfo> ctmSpecialInfos = [];
-
-  // List<String> _prodExteriorImages = [];
-  // List<String> _prodInteriorImages = [];
-  // List<String> _prodImages = [];
+  List<Product> allProducts = [];
+  List<ProdImages> prodImages = [];
+  List<UserDetail> userDetails = [];
+  List<ProdImages> prodImagesE, prodImagesI = [];
+  List<Product> products, similarlisting = [];
+  List<FavoriteProd> favoriteProd = [];
+  User user;
 
   void _socialShare(BuildContext context, String downloadLink) {
     final RenderBox box = context.findRenderObject();
@@ -49,47 +61,27 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
         sharePositionOrigin: box.localToGlobal(Offset.zero) & box.size);
   }
 
-  // Future<void> _listExteriorImages(prodDocId) async {
-  //   //   _prodExteriorImages = [];
-  //   // _prodInteriorImages = [];
-
-  //   List<ProdImages> prodImages = [];
-  //   firebase_storage.ListResult result = await firebase_storage
-  //       .FirebaseStorage.instance
-  //       .ref('$prodDocId/exterior')
-  //       .listAll();
-
-  //   result.items.forEach((firebase_storage.Reference ref) async {
-  //     final urlImage = await ref.getDownloadURL();
-  //     _prodExteriorImages.add(urlImage);
-  //     prodImages.add(urlImage);
-  //     print(urlImage);
-  //     print('Found file: $ref');
-  //   });
-
-  //   // result.prefixes.forEach((firebase_storage.Reference ref) {
-  //   //   print('Found directory: $ref');
-  //   // });
-  // }
-
-  // Future<void> _listInteriorImages(prodDocId) async {
-  //   firebase_storage.ListResult result = await firebase_storage
-  //       .FirebaseStorage.instance
-  //       .ref('$prodDocId/interior')
-  //       .listAll();
-
-  //   result.items.forEach((firebase_storage.Reference ref) async {
-  //     final urlImage = await ref.getDownloadURL();
-  //     _prodInteriorImages.add(urlImage);
-  //     _prodImages.add(urlImage);
-  //     print(urlImage);
-  //     print('Found file: $ref');
-  //   });
-
-  //   // result.prefixes.forEach((firebase_storage.Reference ref) {
-  //   //   print('Found directory: $ref');
-  //   // });
-  // }
+  Future<void> _manageFavorite(String prodId, bool isFav, String userId) async {
+    final _firestore = FirebaseFirestore.instance.collection('favoriteProd');
+    WriteBatch batch = FirebaseFirestore.instance.batch();
+    if (isFav) {
+      return _firestore.add({
+        'prodDocId': prodId,
+        'isFavorite': isFav,
+        'userId': userId,
+      });
+    } else {
+      return _firestore
+          .where('prodDocId', isEqualTo: prodId)
+          .get()
+          .then((querySnapshot) {
+        querySnapshot.docs.forEach((document) {
+          batch.delete(document.reference);
+        });
+        return batch.commit();
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -97,33 +89,23 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    print('check loc1 - product detail item');
-    final user = FirebaseAuth.instance.currentUser;
+  void didChangeDependencies() {
+    _initialDataLoad();
+    super.didChangeDependencies();
+  }
+
+  _initialDataLoad() {
+    user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       userId = "";
     } else {
       userId = user.uid;
     }
-    List<Product> allProducts = Provider.of<List<Product>>(context);
+    allProducts = Provider.of<List<Product>>(context);
 
-    List<ProdImages> prodImages = Provider.of<List<ProdImages>>(context);
-    List<UserDetail> userDetails = Provider.of<List<UserDetail>>(context);
-    List<ProdImages> prodImagesE = [];
-    List<ProdImages> prodImagesI = [];
-    List<Product> similarlisting = [];
-    List<Product> products = [];
-    final getCurrentLocation =
-        Provider.of<GetCurrentLocation>(context, listen: false);
-    setState(() {
-      _currencyName = getCurrentLocation.currencyCode;
-      _currencySymbol = getCurrencySymbolByName(_currencyName);
-      print("Currency symbol by Name - $_currencySymbol");
-    });
-
-    print(widget.productDocId);
-    // _listExteriorImages(widget.productDocId);
-    // _listInteriorImages(widget.productDocId);
+    prodImages = Provider.of<List<ProdImages>>(context);
+    userDetails = Provider.of<List<UserDetail>>(context);
+    favoriteProd = Provider.of<List<FavoriteProd>>(context);
 
     if (allProducts.length > 0 &&
         userDetails.length > 0 &&
@@ -132,59 +114,64 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
           .where((e) => e.prodDocId.trim() == widget.productDocId.trim())
           .toList();
       similarlisting = allProducts
-          .where((e) => e.prodName.trim().toLowerCase().contains(
-                products[0].prodName.trim().toLowerCase(),
-              ))
+          .where((e) =>
+              (e.prodName
+                  .trim()
+                  .toLowerCase()
+                  .contains(products[0].prodName.trim().toLowerCase())) ||
+              (e.model
+                  .trim()
+                  .toLowerCase()
+                  .contains(products[0].model.trim().toLowerCase())) ||
+              (e.make
+                  .trim()
+                  .toLowerCase()
+                  .contains(products[0].make.trim().toLowerCase())) ||
+              (e.subCatType
+                  .trim()
+                  .toLowerCase()
+                  .contains(products[0].subCatType.trim().toLowerCase())))
           .toList();
 
-      print('check121212 - ${products[0].prodDocId}');
-      print('check121212 - ${products[0].userDetailDocId}');
+      similarlisting = similarlisting
+          .where((e) =>
+              e.prodDocId != products[0].prodDocId &&
+              e.make != "Others" &&
+              e.model != "Others")
+          .toList();
+
+      print("similarlisting - ${similarlisting.length}");
+
       userDetails = userDetails
           .where((e) =>
               e.userDetailDocId.trim() == products[0].userDetailDocId.trim())
           .toList();
-      print('image1 - ${prodImages.length}');
+
       prodImages = prodImages
           .where((e) => e.prodDocId.trim() == widget.productDocId.trim())
           .toList();
-      print('image2 - ${prodImages.length}');
 
-      // if (prodImages.length > 0) {
       prodImagesE = prodImages.where((e) => e.imageType.trim() == "E").toList();
 
       prodImagesI = prodImages.where((e) => e.imageType.trim() == "I").toList();
-      // }
+
       prodImages = prodImagesE + prodImagesI;
       _catCar = false;
-      // if (products[0].catName.toLowerCase() == 'car') {
+
       ctmSpecialInfos = [];
-      if (products[0].catName.trim() == 'Car'.trim() ||
-          products[0].catName.trim() == 'Truck'.trim() ||
-          products[0].catName.trim() == 'Motorbike'.trim()) {
+      if (products[0].catName.trim() == 'Vehicle' &&
+          !products[0].subCatType.contains('Accessories')) {
         ctmSpecialInfos = Provider.of<List<CtmSpecialInfo>>(context);
         if (ctmSpecialInfos.length > 0) {
-          if (products[0].catName.trim() == 'Car'.trim()) {
+          if (products[0].subCatType == 'Cars' ||
+              products[0].subCatType == 'Trucks' ||
+              products[0].subCatType == 'Caravans') {
             _catCar = true;
           }
 
-          // if (ctmSpecialInfos != null) {
           ctmSpecialInfos = ctmSpecialInfos
               .where((e) => e.prodDocId.trim() == widget.productDocId.trim())
               .toList();
-          // } else {
-          //   Text("Loading");
-          // }
-          // } else if (products[0].catName.toLowerCase() == 'motorbike') {
-          //   // if (ctmSpecialInfos != null) {
-          //   ctmSpecialInfos = ctmSpecialInfos
-          //       .where((e) => e.prodDocId.trim() == widget.productDocId.trim())
-          //       .toList();
-          //   // } else {
-          //   //   Text("Loading");
-          //   // }
-          // } else {
-          //   Text("Loading");
-          // }
         } else {
           ctmSpecialInfos = [];
         }
@@ -197,116 +184,131 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
         dataAvailable = false;
       });
     }
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return dataAvailable
         ? CustomScrollView(
             slivers: [
               SliverAppBar(
                 elevation: 0.0,
-                backgroundColor: Colors.white,
+                backgroundColor: bBackgroundColor,
                 expandedHeight: 200,
                 floating: true,
                 pinned: true,
-                flexibleSpace: FlexibleSpaceBar(
-                  background: prodImages.length > 0
-                      ? Stack(
-                          children: [
-                            CarouselSlider.builder(
-                              itemCount: prodImages.length,
-                              options: CarouselOptions(
-                                height: MediaQuery.of(context).size.height,
-                                // autoPlay: false,
-                                // aspectRatio: 2.0,
-                                // enlargeCenterPage: true,
-                                viewportFraction: 1.0,
-                                enlargeCenterPage: false,
-                              ),
-                              itemBuilder: (context, index, realIdx) {
-                                return Container(
-                                  child: Center(
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        // Navigator.of(context).pushNamed(
-                                        //     GalleryScreen.routeName,
-                                        //     arguments: prodImages);
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (_) {
-                                                return ViewPhotos(
-                                                  imageIndex: index,
-                                                  imageList: prodImages,
-                                                  pageTitle: 'Gallery',
-                                                  // heroTitle: "image$index",
-                                                );
-                                              },
-                                              fullscreenDialog: true),
-                                        );
-                                      },
-                                      child: Image.network(
-                                        prodImages[index].imageUrl,
-                                        fit: BoxFit.cover,
-                                        width:
-                                            MediaQuery.of(context).size.width,
-                                      ),
-                                    ),
+                flexibleSpace: LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) {
+                    var top = constraints.biggest.height;
+                    return FlexibleSpaceBar(
+                      background: prodImages.length > 0
+                          ? Stack(
+                              children: [
+                                CarouselSlider.builder(
+                                  itemCount: prodImages.length,
+                                  options: CarouselOptions(
+                                    height: MediaQuery.of(context).size.height,
+                                    // autoPlay: false,
+                                    // aspectRatio: 2.0,
+                                    // enlargeCenterPage: true,
+                                    viewportFraction: 1.0,
+                                    enlargeCenterPage: false,
                                   ),
-                                );
-                              },
-                              //             child: Image.network(
-                              //   products[0].imageUrlFeatured,
-                              //   fit: BoxFit.cover,
-                              // ),
-                            ),
-                            Positioned(
-                              bottom: 10,
-                              left: MediaQuery.of(context).size.width - 50,
-                              child: Badge(
-                                badgeContent: Text(
-                                  prodImages.length.toString(),
-                                  style: TextStyle(color: Colors.white),
+                                  itemBuilder: (context, index, realIdx) {
+                                    return Container(
+                                      child: Center(
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (_) {
+                                                    return ViewPhotos(
+                                                      imageIndex: index,
+                                                      imageList: prodImages,
+                                                      pageTitle: 'Gallery',
+                                                    );
+                                                  },
+                                                  fullscreenDialog: true),
+                                            );
+                                          },
+                                          child: Image.network(
+                                            prodImages[index].imageUrl,
+                                            fit: BoxFit.cover,
+                                            width: MediaQuery.of(context)
+                                                .size
+                                                .width,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
-                                badgeColor: Theme.of(context).primaryColor,
-                              ),
+                                Positioned(
+                                  bottom: 10,
+                                  left: MediaQuery.of(context).size.width - 50,
+                                  child: Badge(
+                                    badgeContent: Text(
+                                      prodImages.length.toString(),
+                                      style: const TextStyle(
+                                          color: bBackgroundColor),
+                                    ),
+                                    badgeColor: bPrimaryColor,
+                                  ),
+                                )
+                              ],
                             )
-                          ],
-                        )
-                      : Text(
-                          'Image Loading',
-                          style: TextStyle(color: Colors.black),
-                        ),
-                  title: Text(
-                    products[0].prodName,
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  centerTitle: true,
-                ),
-                //title: Text('My App Bar'),
-                leading: IconButton(
-                  icon: Icon(
-                    Icons.arrow_back,
-                    color: Colors.grey,
-                  ),
-                  onPressed: () {
-                    return Navigator.of(context).pop();
+                          : const Text(
+                              'Image Loading',
+                              style: const TextStyle(color: Colors.black),
+                            ),
+                      title: AnimatedOpacity(
+                          duration: Duration(milliseconds: 300),
+                          opacity: top < 90.0 ? 1.0 : 0.0,
+                          // opacity: 1.0,
+                          child: Text(
+                            products[0].prodName,
+                            style: TextStyle(fontSize: 20.0, color: bGrey800),
+                          )),
+                      centerTitle: true,
+                    );
                   },
+                ),
+                leading: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white60,
+                      borderRadius: const BorderRadius.all(
+                        Radius.circular(50),
+                      ),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: bGrey800,
+                      ),
+                      onPressed: () {
+                        return Navigator.of(context).pop();
+                      },
+                    ),
+                  ),
                 ),
               ),
               SliverToBoxAdapter(
                 child: Container(
-                  color: Colors.white,
-                  // padding: EdgeInsets.all(15.0),
+                  color: bBackgroundColor,
                   child: Column(
                     children: <Widget>[
                       Container(
-                        padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             RichText(
                               text: TextSpan(
                                 text: products[0].prodName,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -315,7 +317,7 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                             ),
                             RichText(
                               text: TextSpan(
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -323,20 +325,69 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                 children: [
                                   WidgetSpan(
                                     child: IconButton(
-                                      icon: Icon(Icons.share),
+                                      icon: const Icon(Icons.share),
                                       onPressed: () {
-                                        _socialShare(context, _downloadLink);
+                                        // _socialShare(context, _downloadLink);
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) {
+                                                return MainLink();
+                                              },
+                                              fullscreenDialog: true),
+                                        );
                                       },
                                     ),
                                     alignment: PlaceholderAlignment.middle,
                                   ),
-                                  WidgetSpan(
-                                    child: SizedBox(
+                                  const WidgetSpan(
+                                    child: const SizedBox(
                                       width: 20,
                                     ),
                                   ),
                                   WidgetSpan(
-                                    child: Icon(Icons.favorite_border_outlined),
+                                    child: IconButton(
+                                      visualDensity: VisualDensity.compact,
+                                      icon: Icon(
+                                        (favoriteProd.any((prod) =>
+                                                prod.prodDocId ==
+                                                    products[0].prodDocId &&
+                                                prod.userId == userId))
+                                            ? Icons.favorite
+                                            : Icons.favorite_outline,
+                                        color: Colors.redAccent,
+                                        size: 27,
+                                      ),
+                                      color: Colors.redAccent,
+                                      onPressed: () {
+                                        if ((favoriteProd.any((prod) =>
+                                            prod.prodDocId ==
+                                                products[0].prodDocId &&
+                                            prod.userId == userId))) {
+                                          isFavorite = false;
+                                        } else {
+                                          isFavorite = true;
+                                        }
+                                        if (user == null) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                                builder: (_) {
+                                                  return AuthScreen();
+                                                },
+                                                fullscreenDialog: true),
+                                          );
+                                        } else {
+                                          if (userId.isEmpty ||
+                                              userId == null) {
+                                            return AuthScreen();
+                                          }
+
+                                          _manageFavorite(products[0].prodDocId,
+                                              isFavorite, userId);
+                                        }
+                                      },
+                                    ),
                                     alignment: PlaceholderAlignment.middle,
                                   ),
                                 ],
@@ -346,12 +397,12 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                         ),
                       ),
                       Container(
-                        padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
                         child: Row(
                           children: [
                             RichText(
-                              text: WidgetSpan(
-                                child: Icon(
+                              text: const WidgetSpan(
+                                child: const Icon(
                                   Icons.location_on_outlined,
                                   size: 15,
                                 ),
@@ -360,9 +411,6 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                             ),
                             TextButton(
                                 onPressed: () {
-                                  // Navigator.of(context)
-                                  //     .pushNamed(GMapScreen.routeName);
-
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -378,45 +426,30 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                   );
                                 },
                                 child: Text(products[0].addressLocation))
-                            // RichText(
-                            //   text: TextSpan(
-                            //     text: products[0].addressLocation,
-                            //     style: TextStyle(
-                            //       color: Colors.black,
-                            //       fontSize: 15,
-                            //       fontWeight: FontWeight.normal,
-                            //     ),
-                            //   ),
-                            // ),
                           ],
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 5,
                       ),
                       Container(
-                        padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
                         child: Row(
                           children: [
                             RichText(
                               text: TextSpan(
-                                text: _currencySymbol,
-                                style: TextStyle(
+                                text: products[0].currencySymbol,
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                 ),
                                 children: [
-                                  TextSpan(
-                                    text: products[0].price,
+                                  const TextSpan(
+                                    text: ' ',
                                   ),
                                   TextSpan(
-                                    text: ' + Shipping',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.normal,
-                                    ),
+                                    text: products[0].price,
                                   ),
                                 ],
                               ),
@@ -424,63 +457,157 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                           ],
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 10,
                       ),
                       userId.trim() != products[0].userDetailDocId.trim()
                           ? Container(
-                              padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                              padding: const EdgeInsets.only(
+                                  left: 15.0, right: 15.0),
                               child: Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceAround,
                                 children: [
-                                  RaisedButton(
-                                    onPressed: () {},
-                                    child: Text('Buy it Now'),
-                                    color: Colors.orange,
-                                  ),
-                                  OutlinedButton(
-                                    onPressed: () {
-                                      print('chat 1');
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) {
-                                              print('chat 2');
-                                              // return ChatScreen();
-                                              return ToChat(
-                                                  userIdFrom: userId.trim(),
-                                                  userIdTo: products[0]
-                                                      .userDetailDocId
-                                                      .trim(),
-                                                  prodName:
-                                                      products[0].prodName);
-                                            },
-                                            fullscreenDialog: true),
-                                      );
-                                    },
-                                    child: Text('Chat with seller'),
-                                  ),
+                                  ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) {
+                                                return ToChat(
+                                                    userIdFrom: userId.trim(),
+                                                    userIdTo: products[0]
+                                                        .userDetailDocId
+                                                        .trim(),
+                                                    prodName:
+                                                        products[0].prodName);
+                                              },
+                                              fullscreenDialog: true),
+                                        );
+                                      },
+                                      icon: Icon(Icons.chat),
+                                      label: Text("Chat with seller")),
                                 ],
                               ),
                             )
                           : Container(
                               child: Text('This Ad is created by You!!'),
                             ),
-                      SizedBox(
+                      const SizedBox(
                         height: 10,
                       ),
-                      Divider(
+                      const Divider(
                         thickness: 7,
                       ),
+
+                      ///
+                      if (products[0].catName == "Vehicle" ||
+                          products[0].catName == "Electronics" ||
+                          products[0].catName == "Home Appliances")
+                        Column(
+                          children: [
+                            const SizedBox(
+                              height: 7,
+                            ),
+                            Container(
+                              padding: const EdgeInsets.only(
+                                  left: 15.0, right: 15.0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width:
+                                        MediaQuery.of(context).size.width / 2,
+                                    child: RichText(
+                                      text: const TextSpan(
+                                        text: 'Make',
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    width:
+                                        MediaQuery.of(context).size.width / 2.5,
+                                    child: RichText(
+                                      text: TextSpan(
+                                        text: products[0].make,
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.normal,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(
+                              height: 7,
+                            ),
+                            const Divider(
+                              thickness: 2,
+                            ),
+                            const SizedBox(
+                              height: 7,
+                            ),
+                            Container(
+                              padding: const EdgeInsets.only(
+                                  left: 15.0, right: 15.0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width:
+                                        MediaQuery.of(context).size.width / 2,
+                                    child: RichText(
+                                      text: const TextSpan(
+                                        text: 'Model',
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    width:
+                                        MediaQuery.of(context).size.width / 2.5,
+                                    child: RichText(
+                                      text: TextSpan(
+                                        text: products[0].model,
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.normal,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(
+                              height: 10,
+                            ),
+                            const Divider(
+                              thickness: 7,
+                            ),
+                          ],
+                        ),
+
+                      /////
                       Container(
-                        padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
                         child: Row(
                           children: [
                             RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'About this product',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -491,14 +618,14 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                         ),
                       ),
                       Container(
-                        padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
                         child: Row(
                           children: [
                             Container(
                               width: MediaQuery.of(context).size.width - 30,
                               child: RichText(
                                 text: TextSpan(
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 15,
                                     fontWeight: FontWeight.normal,
@@ -514,17 +641,17 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                           ],
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 10,
                       ),
                       Container(
-                        padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
                         child: Row(
                           children: [
                             RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Seller\'s ' 'Notes',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -535,14 +662,14 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                         ),
                       ),
                       Container(
-                        padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
                         child: Row(
                           children: [
                             Container(
                               width: MediaQuery.of(context).size.width - 30,
                               child: RichText(
                                 text: TextSpan(
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 15,
                                     fontWeight: FontWeight.normal,
@@ -558,28 +685,29 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                           ],
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 10,
                       ),
-                      Divider(
+                      const Divider(
                         thickness: 7,
                       ),
                       if (prodImagesE.length > 0)
                         Container(
-                          padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                          padding:
+                              const EdgeInsets.only(left: 15.0, right: 15.0),
                           child: Row(
                             children: [
                               RichText(
                                 text: TextSpan(
                                   text:
                                       _catCar ? 'Exterior ' : 'Product Images ',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
                                   ),
                                   children: [
-                                    TextSpan(
+                                    const TextSpan(
                                       text: '(',
                                       style: TextStyle(color: Colors.grey),
                                     ),
@@ -587,7 +715,7 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                       text: '${prodImagesE.length}',
                                       style: TextStyle(color: Colors.grey),
                                     ),
-                                    TextSpan(
+                                    const TextSpan(
                                       text: ')',
                                       style: TextStyle(color: Colors.grey),
                                     ),
@@ -598,12 +726,13 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                           ),
                         ),
                       if (prodImagesE.length > 0)
-                        SizedBox(
+                        const SizedBox(
                           height: 5,
                         ),
                       if (prodImagesE.length > 0)
                         Container(
-                          padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                          padding:
+                              const EdgeInsets.only(left: 15.0, right: 15.0),
                           child: Container(
                             height: 100,
                             child: GestureDetector(
@@ -636,28 +765,29 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                           ),
                         ),
                       if (prodImagesE.length > 0)
-                        SizedBox(
+                        const SizedBox(
                           height: 10,
                         ),
                       if (prodImagesE.length > 0)
-                        Divider(
+                        const Divider(
                           thickness: 7,
                         ),
                       if (prodImagesI.length > 0)
                         Container(
-                          padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                          padding:
+                              const EdgeInsets.only(left: 15.0, right: 15.0),
                           child: Row(
                             children: [
                               RichText(
                                 text: TextSpan(
                                   text: 'Interior ',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
                                   ),
                                   children: [
-                                    TextSpan(
+                                    const TextSpan(
                                       text: '(',
                                       style: TextStyle(color: Colors.grey),
                                     ),
@@ -665,7 +795,7 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                       text: '${prodImagesI.length}',
                                       style: TextStyle(color: Colors.grey),
                                     ),
-                                    TextSpan(
+                                    const TextSpan(
                                       text: ')',
                                       style: TextStyle(color: Colors.grey),
                                     ),
@@ -676,12 +806,13 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                           ),
                         ),
                       if (prodImagesI.length > 0)
-                        SizedBox(
+                        const SizedBox(
                           height: 5,
                         ),
                       if (prodImagesI.length > 0)
                         Container(
-                          padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                          padding:
+                              const EdgeInsets.only(left: 15.0, right: 15.0),
                           child: Container(
                             height: 100,
                             child: ListView.builder(
@@ -713,18 +844,124 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                           ),
                         ),
                       if (prodImagesI.length > 0)
-                        SizedBox(
+                        const SizedBox(
                           height: 10,
                         ),
                       if (prodImagesI.length > 0)
-                        Divider(
+                        const Divider(
                           thickness: 7,
                         ),
+                      Container(
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
+                        child: Row(
+                          children: [
+                            RichText(
+                              text: const TextSpan(
+                                text: 'Product Condition ',
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 7,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: MediaQuery.of(context).size.width / 2,
+                              child: RichText(
+                                text: const TextSpan(
+                                  text: 'Status',
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: MediaQuery.of(context).size.width / 2.5,
+                              child: RichText(
+                                text: TextSpan(
+                                  text: products[0].prodCondition,
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 10,
+                      ),
+                      const Divider(
+                        thickness: 7,
+                      ),
+
+                      ///
+                      const SizedBox(
+                        height: 7,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: MediaQuery.of(context).size.width / 2,
+                              child: RichText(
+                                text: const TextSpan(
+                                  text: 'Type of Ad',
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: MediaQuery.of(context).size.width / 2.5,
+                              child: RichText(
+                                text: TextSpan(
+                                  text: products[0].typeOfAd,
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 10,
+                      ),
+                      const Divider(
+                        thickness: 7,
+                      ),
+
+                      ///
                       if (ctmSpecialInfos.length > 0)
                         Column(
                           children: [
                             Container(
-                              padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                              padding: const EdgeInsets.only(
+                                  left: 15.0, right: 15.0),
                               child: Row(
                                 children: [
                                   RichText(
@@ -732,7 +969,7 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                       text: _catCar
                                           ? 'Vehicle Specs'
                                           : 'Product Specs',
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         color: Colors.black,
                                         fontSize: 15,
                                         fontWeight: FontWeight.bold,
@@ -742,20 +979,21 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                 ],
                               ),
                             ),
-                            SizedBox(
+                            const SizedBox(
                               height: 10,
                             ),
                             Container(
-                              padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                              padding: const EdgeInsets.only(
+                                  left: 15.0, right: 15.0),
                               child: Row(
                                 children: [
                                   Container(
                                     width:
                                         MediaQuery.of(context).size.width / 2,
                                     child: RichText(
-                                      text: TextSpan(
+                                      text: const TextSpan(
                                         text: 'VIN',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Colors.black,
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
@@ -769,7 +1007,7 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                     child: RichText(
                                       text: TextSpan(
                                         text: ctmSpecialInfos[0].vin,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Colors.black,
                                           fontSize: 15,
                                           fontWeight: FontWeight.normal,
@@ -780,21 +1018,21 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                 ],
                               ),
                             ),
-                            SizedBox(
+                            const SizedBox(
                               height: 7,
                             ),
                           ],
                         ),
                       Container(
-                        padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
                         child: Row(
                           children: [
                             Container(
                               width: MediaQuery.of(context).size.width / 2,
                               child: RichText(
-                                text: TextSpan(
+                                text: const TextSpan(
                                   text: 'For Sale By',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
@@ -807,7 +1045,7 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                               child: RichText(
                                 text: TextSpan(
                                   text: products[0].forSaleBy,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 15,
                                     fontWeight: FontWeight.normal,
@@ -818,23 +1056,24 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                           ],
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 7,
                       ),
                       if (ctmSpecialInfos.length > 0)
                         Column(
                           children: [
                             Container(
-                              padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                              padding: const EdgeInsets.only(
+                                  left: 15.0, right: 15.0),
                               child: Row(
                                 children: [
                                   Container(
                                     width:
                                         MediaQuery.of(context).size.width / 2,
                                     child: RichText(
-                                      text: TextSpan(
+                                      text: const TextSpan(
                                         text: 'Exterior Color',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Colors.black,
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
@@ -848,7 +1087,7 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                     child: RichText(
                                       text: TextSpan(
                                         text: ctmSpecialInfos[0].exteriorColor,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Colors.black,
                                           fontSize: 15,
                                           fontWeight: FontWeight.normal,
@@ -859,20 +1098,21 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                 ],
                               ),
                             ),
-                            SizedBox(
+                            const SizedBox(
                               height: 7,
                             ),
                             Container(
-                              padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                              padding: const EdgeInsets.only(
+                                  left: 15.0, right: 15.0),
                               child: Row(
                                 children: [
                                   Container(
                                     width:
                                         MediaQuery.of(context).size.width / 2,
                                     child: RichText(
-                                      text: TextSpan(
+                                      text: const TextSpan(
                                         text: 'Mileage',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Colors.black,
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
@@ -886,7 +1126,7 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                     child: RichText(
                                       text: TextSpan(
                                         text: ctmSpecialInfos[0].mileage,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Colors.black,
                                           fontSize: 15,
                                           fontWeight: FontWeight.normal,
@@ -897,20 +1137,21 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                 ],
                               ),
                             ),
-                            SizedBox(
+                            const SizedBox(
                               height: 7,
                             ),
                             Container(
-                              padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                              padding: const EdgeInsets.only(
+                                  left: 15.0, right: 15.0),
                               child: Row(
                                 children: [
                                   Container(
                                     width:
                                         MediaQuery.of(context).size.width / 2,
                                     child: RichText(
-                                      text: TextSpan(
+                                      text: const TextSpan(
                                         text: 'Transmission',
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Colors.black,
                                           fontSize: 15,
                                           fontWeight: FontWeight.bold,
@@ -924,7 +1165,7 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                     child: RichText(
                                       text: TextSpan(
                                         text: ctmSpecialInfos[0].transmission,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Colors.black,
                                           fontSize: 15,
                                           fontWeight: FontWeight.normal,
@@ -935,11 +1176,12 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                 ],
                               ),
                             ),
-                            SizedBox(
+                            const SizedBox(
                               height: 10,
                             ),
                             Container(
-                              padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                              padding: const EdgeInsets.only(
+                                  left: 15.0, right: 15.0),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -949,27 +1191,27 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                           ViewFullSpecs.routeName,
                                           arguments: ctmSpecialInfos);
                                     },
-                                    child: Text('View full specs'),
+                                    child: const Text('View full specs'),
                                   )
                                 ],
                               ),
                             ),
-                            Divider(
+                            const Divider(
                               thickness: 7,
                             ),
                           ],
                         ),
-                      SizedBox(
+                      const SizedBox(
                         height: 10,
                       ),
                       Container(
-                        padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
                         child: Row(
                           children: [
                             RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'User',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -979,11 +1221,11 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                           ],
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 10,
                       ),
                       Container(
-                        padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
                         child: Row(
                           children: [
                             Container(
@@ -992,24 +1234,17 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                 radius: 25,
                                 child: ClipOval(
                                   // borderRadius: BorderRadius.circular(50),
-                                  child: Image.network(
-                                    userDetails[0].userImageUrl,
-                                    fit: BoxFit.cover,
-                                  ),
+                                  child: userDetails[0].userImageUrl != ""
+                                      ? Image.network(
+                                          userDetails[0].userImageUrl,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Image.asset(
+                                          'assets/images/default_user_image.png',
+                                          fit: BoxFit.cover,
+                                        ),
                                 ),
-                                // backgroundImage:
-                                //     NetworkImage(userDetails[0].userImageUrl),
                               ),
-                              // child: RichText(
-                              //   text: TextSpan(
-                              //     text: 'User Name',
-                              //     style: TextStyle(
-                              //       color: Colors.black,
-                              //       fontSize: 15,
-                              //       fontWeight: FontWeight.bold,
-                              //     ),
-                              //   ),
-                              // ),
                             ),
                             Container(
                               width: MediaQuery.of(context).size.width / 2.5,
@@ -1030,7 +1265,7 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                     child: RichText(
                                       text: TextSpan(
                                         text: userDetails[0].userName,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                           color: Colors.blue,
                                           fontSize: 15,
                                           fontWeight: FontWeight.normal,
@@ -1045,20 +1280,20 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                           ],
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 10,
                       ),
-                      Divider(
+                      const Divider(
                         thickness: 7,
                       ),
                       Container(
-                        padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
                         child: Row(
                           children: [
                             RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Delivery And Payment ',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -1068,19 +1303,19 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                           ],
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 7,
                       ),
                       Container(
-                        padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                        padding: const EdgeInsets.only(left: 15.0, right: 15.0),
                         child: Row(
                           children: [
                             Container(
                               width: MediaQuery.of(context).size.width / 2,
                               child: RichText(
-                                text: TextSpan(
+                                text: const TextSpan(
                                   text: 'Delivery',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
@@ -1093,7 +1328,7 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                               child: RichText(
                                 text: TextSpan(
                                   text: products[0].deliveryInfo,
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 15,
                                     fontWeight: FontWeight.normal,
@@ -1104,22 +1339,22 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                           ],
                         ),
                       ),
-                      SizedBox(
+                      const SizedBox(
                         height: 10,
                       ),
-                      Divider(
+                      const Divider(
                         thickness: 7,
                       ),
-                      if (prodImagesI.length != null)
+                      if (similarlisting.length > 0)
                         Container(
-                          padding: EdgeInsets.only(left: 15.0, right: 15.0),
+                          padding:
+                              const EdgeInsets.only(left: 15.0, right: 15.0),
                           child: Row(
                             children: [
                               RichText(
-                                text: TextSpan(
-                                  text:
-                                      'Explore similar ${products[0].make} listings',
-                                  style: TextStyle(
+                                text: const TextSpan(
+                                  text: 'Explore similar listings',
+                                  style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
@@ -1129,50 +1364,41 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                             ],
                           ),
                         ),
-                      SizedBox(
+                      const SizedBox(
                         height: 5,
                       ),
-                      prodImagesI.length != null
-                          ? Container(
-                              padding: EdgeInsets.only(left: 15.0, right: 15.0),
-                              child: Container(
-                                height: 100,
-                                child: ListView.builder(
-                                    itemCount: prodImagesI.length.compareTo(0),
-                                    scrollDirection: Axis.horizontal,
-                                    itemBuilder: (context, index) {
-                                      return Container(
-                                        width: 100,
-                                        child: GestureDetector(
-                                          onTap: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                  builder: (_) {
-                                                    return Photos();
-                                                  },
-                                                  fullscreenDialog: true),
-                                            );
-                                          },
-                                          child: Image.network(
-                                            similarlisting[index]
-                                                .imageUrlFeatured,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                      );
-                                    }),
-                              ),
-                            )
-                          : Container(
-                              child: Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                            ),
-                      SizedBox(
+                      if (similarlisting.length > 0)
+                        Container(
+                          padding:
+                              const EdgeInsets.only(left: 15.0, right: 15.0),
+                          child: Container(
+                            height: 100,
+                            child: ListView.builder(
+                                itemCount: similarlisting.length,
+                                scrollDirection: Axis.horizontal,
+                                itemBuilder: (context, index) {
+                                  return Container(
+                                    width: 100,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.of(context).pushNamed(
+                                            ProductDetailScreen.routeName,
+                                            arguments: similarlisting[index]
+                                                .prodDocId);
+                                      },
+                                      child: Image.network(
+                                        similarlisting[index].imageUrlFeatured,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  );
+                                }),
+                          ),
+                        ),
+                      const SizedBox(
                         height: 10,
                       ),
-                      Divider(
+                      const Divider(
                         thickness: 7,
                       ),
                     ],
@@ -1182,409 +1408,9 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
             ],
           )
         : Container(
-            child: Center(
-              child: CircularProgressIndicator(),
+            child: const Center(
+              child: CupertinoActivityIndicator(),
             ),
           );
-
-    // return Stack(
-    //   // alignment: Alignment.topLeft,
-    //   children: <Widget>[
-    //     Container(
-    //       // margin: EdgeInsets.all(20),
-    //       child: SingleChildScrollView(
-    //         child: Column(
-    //           children: [
-    //             Container(
-    //               height: MediaQuery.of(context).size.height / 3.5,
-    //               width: double.infinity,
-    //               child: Image.network(
-    //                 products[0].imageUrlFeatured,
-    //                 fit: BoxFit.cover,
-    //               ),
-    //             ),
-    //             SizedBox(
-    //               height: 10,
-    //             ),
-    //             Container(
-    //               child: Column(
-    //                 children: <Widget>[
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       SizedBox(
-    //                         width: 10,
-    //                       ),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text('Product Name'),
-    //                       ),
-    //                       Container(
-    //                           height: 25,
-    //                           width: 150,
-    //                           child: Text(products[0].prodName)),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   // Row(
-    //                   //   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                   //   children: <Widget>[
-    //                   //     Container(
-    //                   //       height: 25,
-    //                   //       width: 150,
-    //                   //       child: Text('Product ID'),
-    //                   //     ),
-    //                   //     Container(
-    //                   //         height: 25,
-    //                   //         width: 150,
-    //                   //         child: Text(products[0].prodId)),
-    //                   //   ],
-    //                   // ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text('Product Status'),
-    //                       ),
-    //                       Container(
-    //                           height: 25,
-    //                           width: 150,
-    //                           child: Text(products[0].prodCondition)),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text('Category'),
-    //                       ),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text(products[0].catName),
-    //                       ),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 25,
-    //                           width: 150,
-    //                           child: Text('Description')),
-    //                       Container(
-    //                           height: 25,
-    //                           width: 150,
-    //                           child: Text(products[0].prodDes)),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text('Price'),
-    //                       ),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text(products[0].price),
-    //                       ),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 25, width: 150, child: Text('Address')),
-    //                       Container(
-    //                           height: 25,
-    //                           width: 150,
-    //                           child: Text(products[0].addressLocation)),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 25,
-    //                           width: 150,
-    //                           child: Text('Product Seller Name')),
-    //                       Container(
-    //                           height: 25,
-    //                           width: 150,
-    //                           child: Text(userDetails[0].userName)),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text('Seller email '),
-    //                       ),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text(userDetails[0].email),
-    //                       ),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 25,
-    //                           width: 150,
-    //                           child: Text('Seller Phone # ')),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text(userDetails[0].phoneNumber == null
-    //                             ? 'No Phone # shown'
-    //                             : userDetails[0].phoneNumber),
-    //                       ),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 55,
-    //                           width: 200,
-    //                           child: Text('Product doc id')),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text(products[0].prodDocId),
-    //                       ),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 55,
-    //                           width: 200,
-    //                           child: Text('Product doc id')),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text(products[0].prodDocId),
-    //                       ),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 55,
-    //                           width: 200,
-    //                           child: Text('Product doc id')),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text(products[0].prodDocId),
-    //                       ),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 55,
-    //                           width: 200,
-    //                           child: Text('Product doc id')),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text(products[0].prodDocId),
-    //                       ),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 55,
-    //                           width: 200,
-    //                           child: Text('Product doc id')),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text(products[0].prodDocId),
-    //                       ),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 55,
-    //                           width: 200,
-    //                           child: Text('Product doc id')),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text(products[0].prodDocId),
-    //                       ),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 55,
-    //                           width: 200,
-    //                           child: Text('Product doc id')),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text(products[0].prodDocId),
-    //                       ),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 55,
-    //                           width: 200,
-    //                           child: Text('Product doc id')),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text(products[0].prodDocId),
-    //                       ),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 55,
-    //                           width: 200,
-    //                           child: Text('Product doc id')),
-    //                       Container(
-    //                         height: 25,
-    //                         width: 150,
-    //                         child: Text(products[0].prodDocId),
-    //                       ),
-    //                     ],
-    //                   ),
-    //                   SizedBox(
-    //                     height: 5,
-    //                   ),
-    //                   Row(
-    //                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    //                     children: <Widget>[
-    //                       Container(
-    //                           height: 25,
-    //                           width: 150,
-    //                           child: Text('Social Share : ')),
-    //                       Container(
-    //                           height: 25,
-    //                           width: 150,
-    //                           child: IconButton(
-    //                               icon: Icon(Icons.share),
-    //                               onPressed: () {
-    //                                 _socialShare(context, _downloadLink);
-    //                               })),
-    //                     ],
-    //                   ),
-    //                 ],
-    //               ),
-    //             ),
-    //           ],
-    //         ),
-    //       ),
-    //     ),
-    //     // IconButton(
-    //     //   icon: Icon(
-    //     //     Icons.arrow_back,
-    //     //     color: Colors.white,
-    //     //   ),
-    //     //   onPressed: () {
-    //     //     Navigator.pop(context);
-    //     //   },
-    //     // ),
-    //     //
-    //     Positioned(
-    //       top: 0.0,
-    //       left: 0.0,
-    //       right: 0.0,
-    //       child: AppBar(
-    //         title: Text(''), // You can add title here
-    //         leading: new IconButton(
-    //           icon: new Icon(Icons.arrow_back, color: Colors.white),
-    //           onPressed: () => Navigator.of(context).pop(),
-    //         ),
-    //         backgroundColor:
-    //             Colors.blue.withOpacity(0.0), //You can make this transparent
-    //         elevation: 0.0, //No shadow
-    //       ),
-    //     ),
-    //   ],
-    // );
   }
 }

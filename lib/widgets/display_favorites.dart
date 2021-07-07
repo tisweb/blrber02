@@ -1,8 +1,16 @@
-import 'package:blrber/models/product.dart';
-import 'package:blrber/screens/product_detail_screen.dart';
+//Imports for pubspec Packages
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+//Imports for Constants
+import '../constants.dart';
+
+//Imports for Models
+import '../models/product.dart';
+
+//Imports for Screen
+import '../screens/product_detail_screen.dart';
 
 class DisplayFavorites extends StatefulWidget {
   @override
@@ -10,20 +18,29 @@ class DisplayFavorites extends StatefulWidget {
 }
 
 class _DisplayFavoritesState extends State<DisplayFavorites> {
-  @override
-  Widget build(BuildContext context) {
-    print('check loc1 - display favorite');
-    final user = FirebaseAuth.instance.currentUser;
-    List<Product> products = Provider.of<List<Product>>(context);
+  User user;
+  List<Product> products = [];
+  List<FavoriteProd> favoriteProd = [];
 
-    List<FavoriteProd> favoriteProd = Provider.of<List<FavoriteProd>>(context);
+  @override
+  void didChangeDependencies() {
+    products = [];
+    favoriteProd = [];
+    user = FirebaseAuth.instance.currentUser;
+    products = Provider.of<List<Product>>(context);
+
+    favoriteProd = Provider.of<List<FavoriteProd>>(context);
 
     if (favoriteProd != null) {
       favoriteProd = favoriteProd
           .where((e) => e.userId.trim() == user.uid.trim())
           .toList();
     }
+    super.didChangeDependencies();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return favoriteProd.length > 0
         ? Container(
             child: Padding(
@@ -33,36 +50,66 @@ class _DisplayFavoritesState extends State<DisplayFavorites> {
                 itemBuilder: (BuildContext context, int index) {
                   final int prodIndex = products.indexWhere((prod) =>
                       prod.prodDocId == favoriteProd[index].prodDocId);
-                  print('prod index- $prodIndex');
-                  return Column(
-                    children: [
-                      Expanded(
-                        flex: 9,
-                        child: Stack(
-                          children: <Widget>[
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).pushNamed(
-                                    ProductDetailScreen.routeName,
-                                    arguments: products[prodIndex].prodDocId);
-                              },
-                              child: ClipRRect(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(12)),
-                                child: Image(
-                                  image: NetworkImage(
-                                    products[prodIndex].imageUrlFeatured,
+
+                  return Container(
+                    decoration: BoxDecoration(
+                        color: bBackgroundColor,
+                        borderRadius: BorderRadius.all(Radius.circular(8))),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          flex: 9,
+                          child: Stack(
+                            children: <Widget>[
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.of(context).pushNamed(
+                                      ProductDetailScreen.routeName,
+                                      arguments: products[prodIndex].prodDocId);
+                                },
+                                child: ClipRRect(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(8)),
+                                  child: Image(
+                                    image: NetworkImage(
+                                      products[prodIndex].imageUrlFeatured,
+                                    ),
+                                    fit: BoxFit.fill,
                                   ),
-                                  fit: BoxFit.fill,
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      Expanded(
-                          flex: 2, child: Text(products[prodIndex].prodName)),
-                    ],
+                        Expanded(
+                          flex: 2,
+                          child: Align(
+                            alignment: Alignment.center,
+                            child: Column(
+                              children: [
+                                Container(
+                                  color: bBackgroundColor,
+                                  child: Text(
+                                    products[prodIndex].prodName,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  '${products[prodIndex].currencySymbol} - ${products[prodIndex].price}',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 },
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -74,8 +121,8 @@ class _DisplayFavoritesState extends State<DisplayFavorites> {
               ),
             ),
           )
-        : Center(
-            child: Text('Please add Favorite products!!'),
+        : const Center(
+            child: Text('Please Add Favorite products!!'),
           );
   }
 }

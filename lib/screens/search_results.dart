@@ -10,20 +10,20 @@ class SearchResults extends StatefulWidget {
 }
 
 class _SearchResultsState extends State<SearchResults> {
-  String _productName = "";
+  String _catName = "";
   String _prodCondition = "";
   String _displayType = "Search";
   @override
   Widget build(BuildContext context) {
-    _productName = ModalRoute.of(context).settings.arguments as String;
-
+    _catName = ModalRoute.of(context).settings.arguments as String;
+    print("checking audio on search - $_catName");
     return Scaffold(
       appBar: AppBar(
         title: Text('Search Results'),
       ),
       body: Container(
         child: DisplayProductGrid(
-          inCatName: _productName,
+          inCatName: _catName,
           inProdCondition: _prodCondition,
           inDisplayType: _displayType,
         ),

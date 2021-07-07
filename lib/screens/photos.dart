@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../constants.dart';
 import './view_photos.dart';
 import '../models/product.dart';
 
@@ -49,7 +50,7 @@ class _PhotosState extends State<Photos> {
               Navigator.of(context).pop();
             }),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: bBackgroundColor,
       body: Column(
         children: [
           Expanded(
