@@ -57,8 +57,7 @@ class _AuthFormNewState extends State<AuthFormNew>
     _otpcontroller.dispose();
     _password.dispose();
     _confirmpassword.dispose();
-    focusNode.unfocus();
-    FocusScope.of(context).unfocus();
+
     super.dispose();
   }
 

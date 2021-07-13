@@ -32,6 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   User user;
   String _deleteAccount = '';
   bool _reAuth = false;
+  int prodCount = 0;
   List<String> availableProdCC = [];
   final googleSignIn = GoogleSignIn();
   final TextEditingController _password = TextEditingController();
@@ -55,6 +56,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (userDetails.length > 0) {
         userDataUpdated = userDetails[0];
       }
+    }
+
+    if (userDataUpdated != null) {
+      prodCount = products
+          .where((e) => e.userDetailDocId == userDataUpdated.userDetailDocId)
+          .length;
     }
 
     var distinctProductsCC = products.distinct((d) => d.countryCode).toList();
@@ -164,6 +171,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       });
                     },
                   ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showInfoDialog() {
+    showDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: const Text("Products exist"),
+              content: Container(
+                height: MediaQuery.of(context).size.height / 4,
+                child: Center(
+                    child: Text(
+                        "You have posted $prodCount product(s). Please remove before delete ")),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Ok'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
               ],
             );
           },
@@ -549,7 +586,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(fontSize: 18, color: bDisabledColor),
                 ),
                 onTap: () {
-                  _showDeleteDialog();
+                  if (prodCount == 0) {
+                    _showDeleteDialog();
+                  } else {
+                    _showInfoDialog();
+                  }
                 },
               ),
               // ListTile(
