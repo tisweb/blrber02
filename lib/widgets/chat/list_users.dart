@@ -85,7 +85,7 @@ class _ListUsersState extends State<ListUsers> {
     List<UserDetail> userDetailsCU = [];
     if (userDetails.length > 0) {
       userDetailsCU = userDetails
-          .where((e) => e.email.trim() == user.email.trim())
+          .where((e) => e.userDetailDocId.trim() == user.uid.trim())
           .toList();
 
       if (userDetailsCU.length > 0) {

@@ -1,9 +1,12 @@
-import 'package:blrber/screens/auth_screen.dart';
+//Imports for pubspec Packages
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-// Import services
+// Imports for Screens
+import '../screens/auth_screen_new.dart';
+
+// Imports for Services
 import '../constants.dart';
 import '../services/foundation.dart';
 
@@ -32,14 +35,15 @@ class FavoritesScreen extends StatelessWidget {
                   if (userSnapshot.hasData) {
                     return _displayFavorites;
                   } else {
-                    return AuthScreen();
+                    // return AuthScreen();
+                    return AuthScreenNew();
                   }
                 }),
           )
         : Scaffold(
             appBar: AppBar(
               centerTitle: true,
-              title: Text(
+              title: const Text(
                 'Favorites',
                 style: TextStyle(
                     color: bDisabledColor,
@@ -61,7 +65,8 @@ class FavoritesScreen extends StatelessWidget {
                   if (userSnapshot.hasData) {
                     return _displayFavorites;
                   }
-                  return AuthScreen();
+                  // return AuthScreen();
+                  return AuthScreenNew();
                 }),
           );
   }

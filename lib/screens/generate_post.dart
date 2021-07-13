@@ -1,8 +1,14 @@
-import 'package:blrber/screens/auth_screen.dart';
-import 'package:blrber/widgets/post_input_form.dart';
+//Imports for pubspec Packages
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+//Imports for Screens
+import '../screens/auth_screen_new.dart';
+
+//Imports for Widgets
+import '../widgets/post_input_form.dart';
+
+//Imports for Constants
 import '../constants.dart';
 
 class GeneratePost extends StatefulWidget {
@@ -18,7 +24,7 @@ class _GeneratePostState extends State<GeneratePost> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text(
+        title: const Text(
           'Generate Post',
           style: TextStyle(
               color: bDisabledColor, fontWeight: FontWeight.w600, fontSize: 25),
@@ -41,7 +47,8 @@ class _GeneratePostState extends State<GeneratePost> {
                     // editPost: 'false',
                     );
               }
-              return AuthScreen();
+              // return AuthScreen();
+              return AuthScreenNew();
             }),
       ),
     );

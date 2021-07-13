@@ -1,10 +1,17 @@
+//Imports for pubspec packages
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+//Imports for Constants
 import '../constants.dart';
+
+//Imports for Screens
 import './view_photos.dart';
+
+//Imports for Models
 import '../models/product.dart';
 
 class Photos extends StatefulWidget {
@@ -41,9 +48,9 @@ class _PhotosState extends State<Photos> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Photos'),
+        title: const Text('Photos'),
         leading: IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.arrow_back,
             ),
             onPressed: () {

@@ -1,6 +1,7 @@
 //Imports for pubspec Packages
 import 'package:badges/badges.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,9 +17,7 @@ import '../models/product.dart';
 import '../models/user_detail.dart';
 
 //Imports for pubspec Screens
-import '../screens/auth_screen.dart';
 import '../screens/gmap_screen.dart';
-import '../screens/main_link.dart';
 import '../screens/photos.dart';
 import '../screens/product_detail_screen.dart';
 import '../screens/user_post_catalog.dart';
@@ -38,7 +37,6 @@ class ProductDetailItem extends StatefulWidget {
 }
 
 class _ProductDetailItemState extends State<ProductDetailItem> {
-  String _downloadLink = "download link";
   bool _catCar = false;
   bool dataAvailable = false;
 
@@ -52,13 +50,53 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
   List<Product> products, similarlisting = [];
   List<FavoriteProd> favoriteProd = [];
   User user;
+  String _linkMessage;
+  bool _isCreatingLink = false;
 
-  void _socialShare(BuildContext context, String downloadLink) {
+  Future<void> _socialShare(BuildContext context, String prodDocId) async {
+    await _createDynamicLink(true, prodDocId);
     final RenderBox box = context.findRenderObject();
-    final String text = downloadLink;
+    final String text = _linkMessage;
     Share.share(text,
         subject: text,
         sharePositionOrigin: box.localToGlobal(Offset.zero) & box.size);
+  }
+
+  Future<void> _createDynamicLink(bool short, String prodDocID) async {
+    setState(() {
+      _isCreatingLink = true;
+    });
+
+    final DynamicLinkParameters parameters = DynamicLinkParameters(
+      uriPrefix: 'https://blrberdev2.page.link',
+      // link: Uri.parse('https://blrberdev2.page.link/helloworld'),
+      link: Uri.parse(
+          'https://newworkspaceproduction.com/?view=product-detail&id=$prodDocID'),
+      androidParameters: AndroidParameters(
+        packageName: 'com.newworkspaceproduction.blrber',
+        minimumVersion: 0,
+      ),
+      dynamicLinkParametersOptions: DynamicLinkParametersOptions(
+        shortDynamicLinkPathLength: ShortDynamicLinkPathLength.short,
+      ),
+      // iosParameters: IosParameters(
+      //   bundleId: 'com.google.FirebaseCppDynamicLinksTestApp.dev',
+      //   minimumVersion: '0',
+      // ),
+    );
+
+    Uri url;
+    if (short) {
+      final ShortDynamicLink shortLink = await parameters.buildShortLink();
+      url = shortLink.shortUrl;
+    } else {
+      url = await parameters.buildUrl();
+    }
+
+    setState(() {
+      _linkMessage = url.toString();
+      _isCreatingLink = false;
+    });
   }
 
   Future<void> _manageFavorite(String prodId, bool isFav, String userId) async {
@@ -326,16 +364,9 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                   WidgetSpan(
                                     child: IconButton(
                                       icon: const Icon(Icons.share),
-                                      onPressed: () {
-                                        // _socialShare(context, _downloadLink);
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (_) {
-                                                return MainLink();
-                                              },
-                                              fullscreenDialog: true),
-                                        );
+                                      onPressed: () async {
+                                        await _socialShare(
+                                            context, products[0].prodDocId);
                                       },
                                     ),
                                     alignment: PlaceholderAlignment.middle,
@@ -369,19 +400,31 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                           isFavorite = true;
                                         }
                                         if (user == null) {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                                builder: (_) {
-                                                  return AuthScreen();
-                                                },
-                                                fullscreenDialog: true),
+                                          // Navigator.push(
+                                          //   context,
+                                          //   MaterialPageRoute(
+                                          //       builder: (_) {
+                                          //         // return AuthScreen();
+                                          //         print('userId 1 - $userId');
+                                          //         return AuthScreenNew();
+                                          //         setState(() {});
+                                          //       },
+                                          //       fullscreenDialog: true),
+                                          // );
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  'Please login to add items in Favorites!'),
+                                            ),
                                           );
                                         } else {
-                                          if (userId.isEmpty ||
-                                              userId == null) {
-                                            return AuthScreen();
-                                          }
+                                          // if (userId.isEmpty ||
+                                          //     userId == null) {
+                                          //   // return AuthScreen();
+                                          //   print('userId 2 - $userId');
+                                          //   return AuthScreenNew();
+                                          // }
 
                                           _manageFavorite(products[0].prodDocId,
                                               isFavorite, userId);

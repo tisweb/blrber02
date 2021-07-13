@@ -1,5 +1,11 @@
-import 'package:blrber/screens/tabs_screen.dart';
+//Imports for pubspec packages
 import 'package:flutter/material.dart';
+
+//Imports for Constants
+import '../constants.dart';
+
+//Imports for Screens
+import '../screens/tabs_screen.dart';
 
 class PostAddedResultScreen extends StatelessWidget {
   final String editPost;
@@ -11,11 +17,38 @@ class PostAddedResultScreen extends StatelessWidget {
       body: Center(
         child: Container(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Center(
-                child: Text('Your post added successfully!'),
+              RichText(
+                text: const TextSpan(
+                  text: 'Your post added successfully!',
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-              TextButton(
+              RichText(
+                text: const TextSpan(
+                  text: 'You will be notified once your post is verified!',
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(
+                height: 10,
+              ),
+              ElevatedButton.icon(
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all<Color>(
+                    bPrimaryColor,
+                  ),
+                ),
                 onPressed: () {
                   editPost == "true"
                       ? Navigator.of(context).pop()
@@ -28,8 +61,9 @@ class PostAddedResultScreen extends StatelessWidget {
                               fullscreenDialog: true),
                         );
                 },
-                child: Text('Continue'),
-              )
+                icon: const Icon(Icons.launch),
+                label: const Text('Continue'),
+              ),
             ],
           ),
         ),

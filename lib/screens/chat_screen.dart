@@ -1,4 +1,5 @@
 //Imports for pubspec Packages
+import 'package:blrber/screens/auth_screen_new.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -6,7 +7,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../constants.dart';
 
 //Imports for Screens
-import './auth_screen.dart';
 import './chat_users.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -41,7 +41,8 @@ class _ChatScreenState extends State<ChatScreen> {
             if (userSnapshot.hasData) {
               return ChatUsers();
             } else {
-              return AuthScreen();
+              // return AuthScreen();
+              return AuthScreenNew();
             }
           },
         ),

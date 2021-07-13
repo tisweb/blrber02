@@ -2,12 +2,14 @@ class Category {
   String catDocId;
   String catName;
   String imageUrl;
+  int serialNum;
   int iconValue;
 
   Category({
     this.catDocId,
     this.catName,
     this.imageUrl,
+    this.serialNum,
     this.iconValue,
   });
 }

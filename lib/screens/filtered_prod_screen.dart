@@ -1,4 +1,7 @@
+//Imports for pubspec Packages
 import 'package:flutter/material.dart';
+
+//Imports for Widgets
 import '../widgets/display_product_grid.dart';
 
 class FilteredProdScreen extends StatelessWidget {
@@ -8,10 +11,9 @@ class FilteredProdScreen extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
-    print('filtered - ${queriedProdIdList.length}');
     return Scaffold(
       appBar: AppBar(
-        title: Text('Results'),
+        title: const Text('Results'),
         centerTitle: true,
       ),
       body: DisplayProductGrid(

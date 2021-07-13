@@ -1,6 +1,8 @@
-import 'package:blrber/widgets/display_product_grid.dart';
-
+// Imports for pubspec Packages
 import 'package:flutter/material.dart';
+
+// Imports for Widgets
+import '../widgets/display_product_grid.dart';
 
 class SearchResults extends StatefulWidget {
   static const routeName = '/search-results';
@@ -16,10 +18,10 @@ class _SearchResultsState extends State<SearchResults> {
   @override
   Widget build(BuildContext context) {
     _catName = ModalRoute.of(context).settings.arguments as String;
-    print("checking audio on search - $_catName");
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Search Results'),
+        title: const Text('Search Results'),
       ),
       body: Container(
         child: DisplayProductGrid(

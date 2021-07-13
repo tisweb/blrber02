@@ -186,8 +186,10 @@ class Database {
             .map((DocumentSnapshot documentSnapshot) => ReceivedMsgCount(
                   receivedMsgCountId: documentSnapshot.id,
                   receivedUserName: documentSnapshot.data()["receivedUserName"],
+                  receivedUserId: documentSnapshot.data()["receivedUserId"],
                   receivedMsgCount: documentSnapshot.data()["receivedMsgCount"],
                   sentUserName: documentSnapshot.data()["sentUserName"],
+                  sentUserId: documentSnapshot.data()["sentUserId"],
                   prodName: documentSnapshot.data()["prodName"],
                 ))
             .toList());
@@ -200,6 +202,7 @@ class Database {
                 catDocId: documentSnapshot.id,
                 catName: documentSnapshot.data()["catName"],
                 imageUrl: documentSnapshot.data()["imageUrl"],
+                serialNum: documentSnapshot.data()["serialNum"],
                 iconValue: documentSnapshot.data()["iconValue"]))
             .toList());
   }

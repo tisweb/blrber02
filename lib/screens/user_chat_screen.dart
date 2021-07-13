@@ -138,8 +138,10 @@ class _UserChatScreenState extends State<UserChatScreen> {
                 .collection('receivedMsgCount')
                 .add({
                   'receivedUserName': widget.userNameTo,
+                  'receivedUserId': widget.userIdTo,
                   'receivedMsgCount': 1,
                   'sentUserName': userData['userName'],
+                  'sentUserId': user.uid,
                   'prodName': widget.prodName,
                 })
                 .then((value) => print("receivedMsgCount added"))

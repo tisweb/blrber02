@@ -1,17 +1,20 @@
-import 'package:blrber/models/user_detail.dart';
-import 'package:blrber/screens/auth_screen.dart';
-import 'package:blrber/widgets/display_admin_profile.dart';
+// Imports for pubspec Packages
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-// Import services
+// Imports for Models
+import '../models/user_detail.dart';
+
+// Imports for Services
 import '../constants.dart';
 import '../services/foundation.dart';
 
 //Imports for Widgets
 import '../widgets/display_profile.dart';
+import '../widgets/display_admin_profile.dart';
+import 'auth_screen_new.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -24,14 +27,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return isIos
         ? CupertinoPageScaffold(
             navigationBar: CupertinoNavigationBar(
-              middle: Text('Profile'),
+              middle: const Text('Profile'),
             ),
             child: DisplayProfile(),
           )
         : Scaffold(
             appBar: AppBar(
               centerTitle: true,
-              title: Text(
+              title: const Text(
                 'Profile',
                 style: TextStyle(
                     color: bDisabledColor,
@@ -58,23 +61,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     List<AdminUser> adminUsers =
                         Provider.of<List<AdminUser>>(context);
 
-                    print('adminUsers.length - ${adminUsers.length}');
                     // if (user.emailVerified) {
                     if (adminUsers.length > 0 &&
                         adminUsers
                             .any((e) => e.userId.trim() == user.uid.trim())) {
-                      print('calling display admins profile');
                       return DisplayAdminProfile();
                     } else {
-                      print('calling display profile');
                       return DisplayProfile();
                     }
                     // } else {
                     //   return AuthScreen();
                     // }
                   } else {
-                    print('calling Auth Screen');
-                    return AuthScreen();
+                    // return AuthScreen();
+                    return AuthScreenNew();
                   }
                 },
               ),

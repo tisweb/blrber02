@@ -1,5 +1,8 @@
-import 'package:blrber/models/product.dart';
+//Imports for pubspec Packages
 import 'package:flutter/material.dart';
+
+//Imports for Models
+import 'package:blrber/models/product.dart';
 
 class ViewFullSpecs extends StatelessWidget {
   static const routeName = '/view_full_specs';
@@ -9,7 +12,7 @@ class ViewFullSpecs extends StatelessWidget {
         ModalRoute.of(context).settings.arguments as List<CtmSpecialInfo>;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Product Specs'),
+        title: const Text('Product Specs'),
       ),
       body: Container(
         padding: EdgeInsets.only(top: 25.0, left: 15.0, right: 15.0),
@@ -25,9 +28,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Year',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -40,7 +43,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].year,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -51,7 +54,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -66,9 +69,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Make',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -81,7 +84,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].make,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -92,7 +95,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -107,9 +110,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Model',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -122,7 +125,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].model,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -133,7 +136,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -148,9 +151,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'VehicleType',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -163,7 +166,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].vehicleType,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -174,7 +177,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -189,9 +192,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Mileage',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -204,7 +207,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].mileage,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -215,7 +218,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -232,7 +235,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: 'VIN',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -245,7 +248,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].vin,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -256,7 +259,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -271,9 +274,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Engine',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -286,7 +289,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].engine,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -297,7 +300,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -312,9 +315,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Fuel Type',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -327,7 +330,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].fuelType,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -338,7 +341,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -353,9 +356,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Options',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -368,7 +371,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].options,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -379,7 +382,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -394,9 +397,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'SubModel',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -409,7 +412,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].subModel,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -420,7 +423,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -435,9 +438,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Number Of Cylinders',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -450,7 +453,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].numberOfCylinders,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -461,7 +464,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -476,9 +479,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Safety Features',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -491,7 +494,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].safetyFeatures,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -502,7 +505,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -517,9 +520,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'DriveType',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -532,7 +535,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].driveType,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -543,7 +546,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -558,9 +561,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'InteriorColor',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -573,7 +576,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].interiorColor,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -584,7 +587,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -599,9 +602,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Body Type',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -614,7 +617,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].bodyType,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -625,7 +628,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -640,9 +643,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'For Sale By',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -655,7 +658,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].forSaleBy,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -666,7 +669,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -681,9 +684,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Warranty',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -696,7 +699,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].warranty,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -707,7 +710,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -722,9 +725,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'ExteriorColor',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -737,7 +740,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].exteriorColor,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -748,7 +751,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -763,9 +766,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Trim',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -778,7 +781,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].trim,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -789,7 +792,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -804,9 +807,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Transmission',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -819,7 +822,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].transmission,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -830,7 +833,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],
@@ -845,9 +848,9 @@ class ViewFullSpecs extends StatelessWidget {
                           Container(
                             width: MediaQuery.of(context).size.width / 2,
                             child: RichText(
-                              text: TextSpan(
+                              text: const TextSpan(
                                 text: 'Steering Location',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -860,7 +863,7 @@ class ViewFullSpecs extends StatelessWidget {
                             child: RichText(
                               text: TextSpan(
                                 text: ctmSpecialInfos[0].steeringLocation,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 15,
                                   fontWeight: FontWeight.normal,
@@ -871,7 +874,7 @@ class ViewFullSpecs extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                   ],

@@ -1,6 +1,7 @@
 //Imports for pubspec Packages
 import 'package:badges/badges.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -46,9 +47,45 @@ class _TabsScreenState extends State<TabsScreen> {
       ChatScreen(),
       ProfileScreen(),
     ];
+    initDynamicLinks(context);
 
     super.initState();
   }
+
+// To handel dynamic links
+  Future<void> initDynamicLinks(BuildContext context) async {
+    FirebaseDynamicLinks.instance.onLink(
+        onSuccess: (PendingDynamicLinkData dynamicLink) async {
+      final Uri deepLink = dynamicLink?.link;
+
+      print("Deep link1 - ${deepLink.toString()}");
+
+      if (deepLink != null) {
+        var routeName = '/${deepLink.queryParameters["view"]}';
+        var id = '${deepLink.queryParameters["id"]}';
+
+        Navigator.of(context).pushNamed(routeName, arguments: id);
+      }
+    }, onError: (OnLinkErrorException e) async {
+      print('onLinkError');
+      print(e.message);
+    });
+
+    final PendingDynamicLinkData data =
+        await FirebaseDynamicLinks.instance.getInitialLink();
+
+    final Uri deepLink = data?.link;
+
+    print("Deep link2 - ${deepLink.toString()}");
+    if (deepLink != null) {
+      var routeName = '/${deepLink.queryParameters["view"]}';
+      var id = '${deepLink.queryParameters["id"]}';
+
+      Navigator.of(context).pushNamed(routeName, arguments: id);
+    }
+  }
+
+  //
 
   void _selectPage(int index) {
     setState(() {
@@ -105,9 +142,9 @@ class _TabsScreenState extends State<TabsScreen> {
                     }
                   } else {
                     totalNewMsgCount = 0;
-                    // Following signOut is to sign out the used if he is deleted from the firebase manually.
+                    // Following signOut is to sign out the user if he is deleted from the firebase manually.
                     // But it is not allowed to deleted the user manually if he is logged in.
-                    FirebaseAuth.instance.signOut();
+                    // FirebaseAuth.instance.signOut();
                   }
                 }
                 return Stack(

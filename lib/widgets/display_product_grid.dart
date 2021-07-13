@@ -18,7 +18,6 @@ import '../models/user_detail.dart';
 //Imports for Provider
 import '../provider/get_current_location.dart';
 //Imports for Screens
-import '../screens/auth_screen.dart';
 import '../screens/motor_filter_screen.dart';
 import '../screens/product_detail_screen.dart';
 
@@ -600,19 +599,30 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                               isFavorite = true;
                                             }
                                             if (user == null) {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                    builder: (_) {
-                                                      return AuthScreen();
-                                                    },
-                                                    fullscreenDialog: true),
+                                              // Navigator.push(
+                                              //   context,
+                                              //   MaterialPageRoute(
+                                              //       builder: (_) {
+                                              //         // return AuthScreen();
+
+                                              //         return AuthScreenNew();
+                                              //       },
+                                              //       fullscreenDialog: true),
+                                              // );
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                      'Please login to add items in Favorites!'),
+                                                ),
                                               );
                                             } else {
-                                              if (userId.isEmpty ||
-                                                  userId == null) {
-                                                return AuthScreen();
-                                              }
+                                              // if (userId.isEmpty ||
+                                              //     userId == null) {
+                                              //   // return AuthScreen();
+
+                                              //   return AuthScreenNew();
+                                              // }
 
                                               _manageFavorite(
                                                   products[j].prodDocId,

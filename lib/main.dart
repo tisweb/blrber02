@@ -1,14 +1,4 @@
-import 'package:blrber/models/chat_detail.dart';
-import 'package:blrber/models/company_detail.dart';
-import 'package:blrber/models/message.dart';
-import 'package:blrber/provider/motor_form_sqldb_provider.dart';
-import 'package:blrber/provider/prod_images_sqldb_provider.dart';
-import 'package:blrber/provider/user_details_provider.dart';
-import 'package:blrber/screens/dynamic_link_screen.dart';
-import 'package:blrber/screens/search_results.dart';
-import 'package:blrber/screens/settings_screen.dart';
-import 'package:blrber/screens/user_chat_screen.dart';
-import 'package:blrber/screens/view_full_specs.dart';
+// Imports for pubspec Packages
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -22,15 +12,27 @@ import './services/foundation.dart';
 // Imports for Screens
 import './screens/tabs_screen.dart';
 import './screens/product_detail_screen.dart';
+import './screens/search_results.dart';
+import './screens/settings_screen.dart';
+import './screens/user_chat_screen.dart';
+import './screens/view_full_specs.dart';
 
 // Imports for Models
 import './models/category.dart';
 import './models/product.dart';
 import './models/user_detail.dart';
+import './models/chat_detail.dart';
+import './models/company_detail.dart';
+import './models/message.dart';
 
 // Imports for Providers
 import './provider/get_current_location.dart';
 import './provider/google_sign_in.dart';
+import './provider/motor_form_sqldb_provider.dart';
+import './provider/prod_images_sqldb_provider.dart';
+import './provider/user_details_provider.dart';
+
+// Imports for Constants
 import 'constants.dart';
 
 Future<void> main() async {
@@ -53,7 +55,6 @@ class MyApp extends StatelessWidget {
     SearchResults.routeName: (ctx) => SearchResults(),
     ViewFullSpecs.routeName: (ctx) => ViewFullSpecs(),
     SettingsScreen.routeName: (ctx) => SettingsScreen(),
-    '/helloworld': (BuildContext context) => DynamicLinkScreen(),
   };
   static const bool _debugShowCheckedModeBanner = false;
   @override
@@ -188,6 +189,7 @@ class MyApp extends StatelessWidget {
           : MaterialApp(
               title: _title,
               theme: ThemeData(
+                  primarySwatch: bPrimaryColor,
                   primaryColor: bPrimaryColor,
                   backgroundColor: bBackgroundColor,
                   disabledColor: bDisabledColor,

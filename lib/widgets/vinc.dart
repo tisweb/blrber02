@@ -99,84 +99,84 @@ class VINC {
   /// Get the Make of the vehicle from the NHTSA database if [extended] mode
   /// is enabled.
   Future<String> getMakeAsync() async {
-    await _fetchExtendedVehicleInfo();
+    _fetchExtendedVehicleInfo();
     return this._info?.make;
   }
 
   /// Get the Model of the vehicle from the NHTSA database if [extended] mode
   /// is enabled.
   Future<String> getModelAsync() async {
-    await _fetchExtendedVehicleInfo();
+    _fetchExtendedVehicleInfo();
     return this._info?.model;
   }
 
   /// Get the Vehicle Type from the NHTSA database if [extended] mode is
   /// enabled.
   Future<String> getVehicleTypeAsync() async {
-    await _fetchExtendedVehicleInfo();
+    _fetchExtendedVehicleInfo();
     return this._info?.vehicleType;
   }
 
   /// Get the Engine Number of Cylinders from the NHTSA database if [extended] mode is
   /// enabled.
   Future<String> getEngineNumberofCylindersAsync() async {
-    await _fetchExtendedVehicleInfo();
+    _fetchExtendedVehicleInfo();
     return this._info?.engineNumberofCylinders;
   }
 
   /// Get the Active Safety System Note from the NHTSA database if [extended] mode is
   /// enabled.
   Future<String> getActiveSafetySystemNoteAsync() async {
-    await _fetchExtendedVehicleInfo();
+    _fetchExtendedVehicleInfo();
     return this._info?.activeSafetySystemNote;
   }
 
   /// Get the Transmission Style from the NHTSA database if [extended] mode is
   /// enabled.
   Future<String> getTransmissionStyleAsync() async {
-    await _fetchExtendedVehicleInfo();
+    _fetchExtendedVehicleInfo();
     return this._info?.transmissionStyle;
   }
 
   /// Get the Steering Location from the NHTSA database if [extended] mode is
   /// enabled.
   Future<String> getSteeringLocationAsync() async {
-    await _fetchExtendedVehicleInfo();
+    _fetchExtendedVehicleInfo();
     return this._info?.steeringLocation;
   }
 
   /// Get the Fuel Type Primary from the NHTSA database if [extended] mode is
   /// enabled.
   Future<String> getFuelTypePrimaryAsync() async {
-    await _fetchExtendedVehicleInfo();
+    _fetchExtendedVehicleInfo();
     return this._info?.fuelTypePrimary;
   }
 
   /// Get the Trim from the NHTSA database if [extended] mode is
   /// enabled.
   Future<String> getTrimAsync() async {
-    await _fetchExtendedVehicleInfo();
+    _fetchExtendedVehicleInfo();
     return this._info?.trim;
   }
 
   /// Get the Drive Type from the NHTSA database if [extended] mode is
   /// enabled.
   Future<String> getDriveTypeAsync() async {
-    await _fetchExtendedVehicleInfo();
+    _fetchExtendedVehicleInfo();
     return this._info?.driveType;
   }
 
   /// Get the Body Type from the NHTSA database if [extended] mode is
   /// enabled.
   Future<String> getBodyTypeAsync() async {
-    await _fetchExtendedVehicleInfo();
+    _fetchExtendedVehicleInfo();
     return this._info?.bodyType;
   }
 
   /// Get the Displacement (L) from the NHTSA database if [extended] mode is
   /// enabled.
   Future<String> getDisplacementLAsync() async {
-    await _fetchExtendedVehicleInfo();
+    _fetchExtendedVehicleInfo();
     return this._info?.displacementL;
   }
 

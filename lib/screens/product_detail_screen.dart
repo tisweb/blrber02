@@ -1,5 +1,7 @@
+//Imports for pubspec Packages
 import 'package:flutter/material.dart';
 
+//Imports for Widgets
 import '../widgets/product_detail_item.dart';
 
 class ProductDetailScreen extends StatefulWidget {

@@ -1,7 +1,12 @@
+//Imports for pubspec Packages
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view_gallery.dart';
+
+//Imports for Constants
 import '../constants.dart';
+
+//Imports for Models
 import '../models/product.dart';
 
 class ViewPhotos extends StatefulWidget {
@@ -41,13 +46,13 @@ class _ViewPhotosState extends State<ViewPhotos> {
         title: RichText(
           text: TextSpan(
             text: widget.pageTitle,
-            style: TextStyle(
+            style: const TextStyle(
               color: bBackgroundColor,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
             children: [
-              TextSpan(
+              const TextSpan(
                 text: '(',
                 style: TextStyle(
                   color: bBackgroundColor,
@@ -79,7 +84,7 @@ class _ViewPhotosState extends State<ViewPhotos> {
                   fontWeight: FontWeight.normal,
                 ),
               ),
-              TextSpan(
+              const TextSpan(
                 text: ')',
                 style: TextStyle(
                   color: bBackgroundColor,

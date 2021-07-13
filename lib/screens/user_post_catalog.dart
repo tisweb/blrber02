@@ -1,12 +1,22 @@
-import 'package:blrber/models/product.dart';
-import 'package:blrber/models/user_detail.dart';
-import 'package:blrber/provider/get_current_location.dart';
-import 'package:blrber/screens/product_detail_screen.dart';
-import 'package:blrber/services/foundation.dart';
+//Imports for pubspec Packages
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
+//Imports for Models
+import '../models/product.dart';
+import '../models/user_detail.dart';
+
+//Imports for Providers
+import '../provider/get_current_location.dart';
+
+//Imports for Screens
+import '../screens/product_detail_screen.dart';
+
+//Imports for Services
+import '../services/foundation.dart';
+
+//Imports for Constants
 import '../constants.dart';
 
 class UserPostCatalog extends StatefulWidget {
@@ -110,7 +120,7 @@ class _UserPostCatalogState extends State<UserPostCatalog> {
                   RichText(
                     text: TextSpan(
                       text: 'User Type  ',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.black,
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -172,7 +182,7 @@ class _UserPostCatalogState extends State<UserPostCatalog> {
                                     )
                                   : Container(
                                       child: Center(
-                                        child: Text('Image Loading...'),
+                                        child: const Text('Image Loading...'),
                                       ),
                                     ),
                             ),
@@ -194,13 +204,13 @@ class _UserPostCatalogState extends State<UserPostCatalog> {
                                 RichText(
                                   text: TextSpan(
                                     text: _currencySymbol,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       color: bDisabledColor,
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,
                                     ),
                                     children: [
-                                      TextSpan(
+                                      const TextSpan(
                                         text: ' ',
                                       ),
                                       TextSpan(
@@ -209,13 +219,13 @@ class _UserPostCatalogState extends State<UserPostCatalog> {
                                     ],
                                   ),
                                 ),
-                                SizedBox(
+                                const SizedBox(
                                   width: 10,
                                 ),
                                 RichText(
                                   text: TextSpan(
                                     text: 'Status : ',
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       color: bDisabledColor,
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,

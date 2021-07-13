@@ -51,12 +51,11 @@ class ImageLabelInfo {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  bool isInitState = false;
-
   String _displayType = "Category";
   List _output;
   String imageLabel = "";
   bool status = false;
+  bool _isInitialState = true;
 
   String _countryCode = "";
   bool _dataLoaded = false;
@@ -72,14 +71,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   @override
   void initState() {
-    isInitState = true;
-    _checkConnectivity();
-    print("Connectivity after ");
-    // getCurrentLocation =
-    //     Provider.of<GetCurrentLocation>(context, listen: false);
-    // getCurrentLocation.getCurrentPosition();
+    getCurrentLocation =
+        Provider.of<GetCurrentLocation>(context, listen: false);
+    getCurrentLocation.getCurrentPosition();
 
-    // LoadMlModel.loadModel();
+    LoadMlModel.loadModel();
 
     super.initState();
   }
@@ -120,8 +116,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
       var imageLabelOut =
           imageLabel.split(",")[0] + " " + imageLabel.split(",")[1];
 
-      print('image labels  out- $imageLabelOut');
-
       if (imageLabelOut != "") {
         Navigator.of(context)
             .pushNamed(SearchResults.routeName, arguments: imageLabelOut);
@@ -143,8 +137,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
       _imageLabel.imageLabel = label.text;
       _imageLabel.confidence = label.confidence;
 
-      print(
-          '_imageLabels info - ${_imageLabel.imageLabel} , ${_imageLabel.confidence}');
       _imageLabels.add(_imageLabel);
     }
 
@@ -156,27 +148,24 @@ class _ExploreScreenState extends State<ExploreScreen> {
       });
     }
 
-    print('_imageLabels length - ${_imageLabels.length}');
-
     return _imageLabels[_imageLabels.length - 1].imageLabel;
   }
 
   @override
   void didChangeDependencies() async {
-    if (_connectionStatus) {
-      _initialGetInfo();
-    }
+    _initialGetInfo();
+
     super.didChangeDependencies();
   }
 
   void _initialGetInfo() {
     getCurrentLocation = Provider.of<GetCurrentLocation>(context);
 
-    if (getCurrentLocation.latitude != 0.0) {
-      setState(() {
-        _dataLoaded = true;
-      });
-    }
+    // if (getCurrentLocation.latitude != 0.0) {
+    //   setState(() {
+    //     _dataLoaded = true;
+    //   });
+    // }
 
     _setBuyingCountryCode();
     final categories = Provider.of<List<Category>>(context);
@@ -208,6 +197,20 @@ class _ExploreScreenState extends State<ExploreScreen> {
         categoryList.add(categories[i]);
       }
     }
+
+    if (categoryList.length > 0) {
+      categoryList.sort((a, b) {
+        var aSerialNum = a.serialNum;
+        var bSerialNum = b.serialNum;
+        return aSerialNum.compareTo(bSerialNum);
+      });
+    }
+
+    if (getCurrentLocation.latitude != 0.0) {
+      setState(() {
+        _dataLoaded = true;
+      });
+    }
   }
 
   void _setBuyingCountryCode() {
@@ -231,22 +234,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
     }
   }
 
-  _checkConnectivity() async {
+  Future<void> _checkConnectivity() async {
     var connectivityStatus = await ConnectivityCheck.connectivity();
     if (connectivityStatus == "WifiInternet" ||
         connectivityStatus == "MobileInternet") {
-      getCurrentLocation =
-          Provider.of<GetCurrentLocation>(context, listen: false);
-      getCurrentLocation.getCurrentPosition();
-
-      LoadMlModel.loadModel();
       setState(() {
         _connectionStatus = true;
       });
     } else {
-      _connectionStatus = false;
+      setState(() {
+        _connectionStatus = false;
+      });
     }
-    print("Connectivity Status = ${connectivityStatus}");
   }
 
   @override
@@ -256,6 +255,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isInitialState) {
+      _isInitialState = false;
+      print("connectivity check");
+      _checkConnectivity();
+    }
     final _appBarRow = Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -321,7 +325,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
 
     final _pageBody = SafeArea(
-      child: _dataLoaded
+      child: _dataLoaded && _connectionStatus
           ? Column(
               children: [
                 Expanded(
@@ -348,12 +352,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           : Center(
                               child: Column(
                                 children: [
-                                  Text("Something went wrong!"),
+                                  const Text("Something went wrong!"),
                                   TextButton(
                                       onPressed: () {
                                         setState(() {});
                                       },
-                                      child: Text('Refresh'))
+                                      child: const Text('Refresh'))
                                 ],
                               ),
                             );
@@ -362,15 +366,31 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 ),
               ],
             )
-          : Center(
-              child:
-                  // CupertinoActivityIndicator(),
-                  CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                    Theme.of(context).scaffoldBackgroundColor),
-                backgroundColor: bPrimaryColor,
-              ),
-            ),
+          : !_connectionStatus
+              ? Center(
+                  child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.cloud_off_outlined,
+                      size: 50,
+                      color: bPrimaryColor,
+                    ),
+                    const SizedBox(
+                      height: 10,
+                    ),
+                    const Text("No Internet Connection!!"),
+                  ],
+                ))
+              : Center(
+                  child:
+                      // CupertinoActivityIndicator(),
+                      CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        Theme.of(context).scaffoldBackgroundColor),
+                    backgroundColor: bPrimaryColor,
+                  ),
+                ),
     );
     final _appBar = AppBar(
       backgroundColor: bBackgroundColor,
@@ -448,7 +468,7 @@ class ItemsSearch extends SearchDelegate<String> {
                 child: Column(
                   children: [
                     Expanded(
-                      child: Text("Name of the product"),
+                      child: const Text("Name of the product"),
                     ),
                     Expanded(
                       child: AvatarGlow(
@@ -461,10 +481,7 @@ class ItemsSearch extends SearchDelegate<String> {
                         child: FloatingActionButton(
                           backgroundColor: bPrimaryColor,
                           onPressed: () async {
-                            // _listen(context);
-                            print('check 1 - $_isListening');
                             if (!_isListening) {
-                              print('check 2 - $_isListening');
                               available = await _speech.initialize(
                                 onStatus: (val) {
                                   print('onStatus: $val');
@@ -473,15 +490,14 @@ class ItemsSearch extends SearchDelegate<String> {
                                   print('onErrorss: $val');
                                 },
                               );
-                              print('check 3 - $_isListening - $available');
+
                               if (available) {
                                 setState(() {
                                   _isListening = true;
                                 });
-                                print("checking1");
+
                                 _speech.listen(
                                   onResult: (val) {
-                                    print("checking2 - ${val.confidence}");
                                     _text = val.recognizedWords;
 
                                     _listeningState = val.finalResult;
@@ -498,7 +514,6 @@ class ItemsSearch extends SearchDelegate<String> {
                                         _isListening = false;
                                       });
 
-                                      print("checking audio1 - $query");
                                       // Future.delayed(Duration(seconds: 1), () {
                                       Navigator.of(context).pop();
 
@@ -533,37 +548,6 @@ class ItemsSearch extends SearchDelegate<String> {
         );
       },
     );
-  }
-
-  void _listen(BuildContext context) async {
-    if (!_isListening) {
-      available = await _speech.initialize(
-        onStatus: (val) {
-          print('onStatus: $val');
-        },
-        onError: (val) {
-          print('onError: $val');
-        },
-      );
-      if (available) {
-        _speech.listen(onResult: (val) {
-          _text = val.recognizedWords;
-
-          _listeningState = val.finalResult;
-
-          if (val.hasConfidenceRating && val.confidence > 0) {
-            _confidence = val.confidence;
-          }
-
-          if (_listeningState == true) {
-            query = _text;
-            print("checking audio - $query");
-            Navigator.of(context)
-                .pushNamed(SearchResults.routeName, arguments: query);
-          } else {}
-        });
-      }
-    }
   }
 
   Future<String> _pickImageS() async {
@@ -619,7 +603,7 @@ class ItemsSearch extends SearchDelegate<String> {
     imageLabelS = output[0]["label"];
 
     var imageLabelOut =
-        imageLabelS.split(" ")[1] + " " + imageLabelS.split(" ")[2];
+        imageLabelS.split(" ")[0] + " " + imageLabelS.split(" ")[1];
 
     return imageLabelOut;
   }
@@ -638,9 +622,7 @@ class ItemsSearch extends SearchDelegate<String> {
               icon: Icon(Icons.mic),
               onPressed: () {
                 _initSpeech();
-                // _speech = stt.SpeechToText();
 
-                // _listen(context);
                 _showListenDialog(context);
               },
             ),

@@ -7,3 +7,4 @@ const bDisabledColor = Color(0xFF616161);
 const bScaffoldBackgroundColor = Color(0xFFEEEEEE);
 const bFontFamily = "Lato";
 const bGrey800 = Color(0xFF424242);
+const bErrorColor = Colors.red;

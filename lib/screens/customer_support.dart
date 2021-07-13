@@ -88,19 +88,6 @@ class _CustomerSupportState extends State<CustomerSupport> {
     }
   }
 
-  Future<void> _launchInBrowser(String url) async {
-    if (await canLaunch(url)) {
-      await launch(
-        url,
-        forceSafariVC: false,
-        forceWebView: false,
-        headers: <String, String>{'my_header_key': 'my_header_value'},
-      );
-    } else {
-      throw 'Could not launch $url';
-    }
-  }
-
   Future<void> _createEmail(String emailContent) async {
     if (await canLaunch(emailContent)) {
       await launch(emailContent);
@@ -163,7 +150,7 @@ class _CustomerSupportState extends State<CustomerSupport> {
                           child: TextButton(
                             onPressed: () async {
                               await launch(
-                                  'https://${companyDetails[0].webSite}/');
+                                  'http://${companyDetails[0].webSite}/');
                             },
                             child: SelectableText(companyDetails[0].webSite),
                           ),
