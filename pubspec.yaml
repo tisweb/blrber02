@@ -98,7 +98,7 @@ flutter_native_splash:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/icon/Blrber_Logo_B.png"    
+  image_path: "assets/icon/blrber_new_icon.png"    
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

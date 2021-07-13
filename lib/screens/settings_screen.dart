@@ -192,7 +192,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: MediaQuery.of(context).size.height / 4,
                 child: Center(
                     child: Text(
-                        "You have posted $prodCount product(s). Please remove before delete ")),
+                        "You have posted $prodCount product(s). Please remove before delete the account")),
               ),
               actions: <Widget>[
                 TextButton(
@@ -255,9 +255,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         );
       } else {
+        print('Exception $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Something went wrong1. Try again! ${e.code}'),
+            content: Text('Something went wrong. Try again!'),
           ),
         );
       }
@@ -266,7 +267,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _deleteAccount = '';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Something went wrong2. Try again! $e'),
+          content: Text('Something went wrong. Try again!'),
         ),
       );
     }
