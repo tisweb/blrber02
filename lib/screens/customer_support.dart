@@ -135,52 +135,52 @@ class _CustomerSupportState extends State<CustomerSupport> {
                                 SelectableText(companyDetails[0].companyName)),
                       ],
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          FontAwesomeIcons.globe,
-                          color: bPrimaryColor,
-                        ),
-                        const SizedBox(
-                          width: 10,
-                        ),
-                        Flexible(
-                          flex: 1,
-                          child: TextButton(
-                            onPressed: () async {
-                              await launch(
-                                  'http://${companyDetails[0].webSite}/');
-                            },
-                            child: SelectableText(companyDetails[0].webSite),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.email,
-                          color: bPrimaryColor,
-                        ),
-                        const SizedBox(
-                          width: 10,
-                        ),
-                        Flexible(
-                          flex: 1,
-                          child: TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _createEmail(
-                                    'mailto:${companyDetails[0].email}?subject=Need Support&body=Please assist..');
-                              });
-                            },
-                            child: SelectableText(companyDetails[0].email),
-                          ),
-                        ),
-                      ],
-                    ),
+                    // Row(
+                    //   mainAxisAlignment: MainAxisAlignment.start,
+                    //   children: [
+                    //     const Icon(
+                    //       FontAwesomeIcons.globe,
+                    //       color: bPrimaryColor,
+                    //     ),
+                    //     const SizedBox(
+                    //       width: 10,
+                    //     ),
+                    //     Flexible(
+                    //       flex: 1,
+                    //       child: TextButton(
+                    //         onPressed: () async {
+                    //           await launch(
+                    //               'http://${companyDetails[0].webSite}/');
+                    //         },
+                    //         child: SelectableText(companyDetails[0].webSite),
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
+                    // Row(
+                    //   mainAxisAlignment: MainAxisAlignment.start,
+                    //   children: [
+                    //     const Icon(
+                    //       Icons.email,
+                    //       color: bPrimaryColor,
+                    //     ),
+                    //     const SizedBox(
+                    //       width: 10,
+                    //     ),
+                    //     Flexible(
+                    //       flex: 1,
+                    //       child: TextButton(
+                    //         onPressed: () {
+                    //           setState(() {
+                    //             _createEmail(
+                    //                 'mailto:${companyDetails[0].email}?subject=Need Support&body=Please assist..');
+                    //           });
+                    //         },
+                    //         child: SelectableText(companyDetails[0].email),
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [

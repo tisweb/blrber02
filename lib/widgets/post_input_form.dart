@@ -483,12 +483,12 @@ class _PostInputFormState extends State<PostInputForm>
             child: Text(_initialSelectedItem),
           ),
         );
-        _subCatTypes.add(
-          DropdownMenuItem(
-            value: "Others",
-            child: Text("Others"),
-          ),
-        );
+        // _subCatTypes.add(
+        //   DropdownMenuItem(
+        //     value: "Others",
+        //     child: Text("Others"),
+        //   ),
+        // );
 
         if (subCatTypes.length > 0) {
           for (SubCategory subCatType in subCatTypes) {
@@ -3728,12 +3728,29 @@ class _PostInputFormState extends State<PostInputForm>
     ImageProperties properties =
         await FlutterNativeImage.getImageProperties(file.path);
 
+    File compressedFile;
     if (properties.width > 600 && properties.height > 600) {
-      File compressedFile = await FlutterNativeImage.compressImage(
+      compressedFile = await FlutterNativeImage.compressImage(
         file.path,
-        targetHeight: 600,
         targetWidth: 600,
-        // quality: 100,
+        targetHeight: 600,
+        quality: 100,
+      );
+      return compressedFile;
+    } else if (properties.width > 600 && properties.height <= 600) {
+      compressedFile = await FlutterNativeImage.compressImage(
+        file.path,
+        targetWidth: 600,
+        targetHeight: properties.height,
+        quality: 100,
+      );
+      return compressedFile;
+    } else if (properties.width <= 600 && properties.height > 600) {
+      compressedFile = await FlutterNativeImage.compressImage(
+        file.path,
+        targetWidth: properties.width,
+        targetHeight: 600,
+        quality: 100,
       );
       return compressedFile;
     } else {

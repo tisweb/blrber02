@@ -2,6 +2,8 @@
 import 'dart:io';
 
 import 'package:avatar_glow/avatar_glow.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:country_picker/country_picker.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flag/flag.dart';
@@ -12,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tflite/tflite.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:darq/darq.dart';
 
 // Imports for Models
 import '../constants.dart';
@@ -59,12 +62,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   String _countryCode = "";
   bool _dataLoaded = false;
-  bool _connectionStatus = false;
+  String _connectionStatus = 'process';
 
   File pickedImage;
 
   TabController _tabController;
 
+  List<String> availableProdCC = [];
   List<Category> categoryList = [];
   List<Product> products = [];
   GetCurrentLocation getCurrentLocation = GetCurrentLocation();
@@ -166,10 +170,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
     //     _dataLoaded = true;
     //   });
     // }
-
-    _setBuyingCountryCode();
     final categories = Provider.of<List<Category>>(context);
     products = Provider.of<List<Product>>(context);
+    _setBuyingCountryCode();
+    if (products.length > 0) {
+      _setProductCountryCode();
+    }
 
     if (_countryCode.isEmpty) {
       _countryCode = getCurrentLocation.countryCode;
@@ -213,6 +219,19 @@ class _ExploreScreenState extends State<ExploreScreen> {
     }
   }
 
+  Future<void> _updateBuyingCountry(String countryCode) async {
+    final user = FirebaseAuth.instance.currentUser;
+    await FirebaseFirestore.instance
+        .collection('userDetails')
+        .doc(user.uid.trim())
+        .update({
+      'buyingCountryCode': countryCode,
+    }).then((value) {
+      print("User Updated with Selected Buying Country");
+    }).catchError((error) =>
+            print("Failed to update User\'s Buying Country: $error"));
+  }
+
   void _setBuyingCountryCode() {
     final user = FirebaseAuth.instance.currentUser;
     _countryCode = "";
@@ -234,16 +253,27 @@ class _ExploreScreenState extends State<ExploreScreen> {
     }
   }
 
+  void _setProductCountryCode() {
+    var distinctProductsCC = products.distinct((d) => d.countryCode).toList();
+
+    availableProdCC = [];
+    if (distinctProductsCC.length > 0) {
+      for (var item in distinctProductsCC) {
+        availableProdCC.add(item.countryCode);
+      }
+    }
+  }
+
   Future<void> _checkConnectivity() async {
     var connectivityStatus = await ConnectivityCheck.connectivity();
     if (connectivityStatus == "WifiInternet" ||
         connectivityStatus == "MobileInternet") {
       setState(() {
-        _connectionStatus = true;
+        _connectionStatus = 'success';
       });
     } else {
       setState(() {
-        _connectionStatus = false;
+        _connectionStatus = 'fail';
       });
     }
   }
@@ -313,19 +343,59 @@ class _ExploreScreenState extends State<ExploreScreen> {
           flex: 1,
           child: Container(
             padding: EdgeInsets.only(left: 5),
-            child: Flag(
+            child: GestureDetector(
+              child: Flag(
                 _countryCode.isEmpty
                     ? getCurrentLocation.countryCode
                     : _countryCode,
                 height: 25,
-                fit: BoxFit.fill),
+                fit: BoxFit.fill,
+              ),
+              onTap: () {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Please login to change Buying country!'),
+                    ),
+                  );
+                } else {
+                  showCountryPicker(
+                    countryFilter: availableProdCC,
+                    context: context,
+                    showPhoneCode: false,
+                    onSelect: (Country country) {
+                      setState(() {
+                        _updateBuyingCountry(country.countryCode);
+                      });
+                    },
+                    countryListTheme: CountryListThemeData(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(40.0),
+                        topRight: Radius.circular(40.0),
+                      ),
+                      inputDecoration: InputDecoration(
+                        labelText: 'Search',
+                        hintText: 'Start typing to search',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: const Color(0xFF8C98A8).withOpacity(0.2),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
           ),
         ),
       ],
     );
 
     final _pageBody = SafeArea(
-      child: _dataLoaded && _connectionStatus
+      child: _dataLoaded && _connectionStatus == 'success'
           ? Column(
               children: [
                 Expanded(
@@ -366,7 +436,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 ),
               ],
             )
-          : !_connectionStatus
+          : _connectionStatus == 'fail'
               ? Center(
                   child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

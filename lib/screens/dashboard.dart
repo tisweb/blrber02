@@ -558,12 +558,29 @@ class _DashboardState extends State<Dashboard> {
   Future<File> compressFile(File file) async {
     ImageProperties properties =
         await FlutterNativeImage.getImageProperties(file.path);
+    File compressedFile;
     if (properties.width > 200 || properties.height > 200) {
-      File compressedFile = await FlutterNativeImage.compressImage(
+      compressedFile = await FlutterNativeImage.compressImage(
         file.path,
-        targetHeight: 200,
         targetWidth: 200,
-        // quality: 100,
+        targetHeight: 200,
+        quality: 100,
+      );
+      return compressedFile;
+    } else if (properties.width > 200 && properties.height <= 200) {
+      compressedFile = await FlutterNativeImage.compressImage(
+        file.path,
+        targetWidth: 200,
+        targetHeight: properties.height,
+        quality: 100,
+      );
+      return compressedFile;
+    } else if (properties.width <= 200 && properties.height > 200) {
+      compressedFile = await FlutterNativeImage.compressImage(
+        file.path,
+        targetWidth: properties.width,
+        targetHeight: 200,
+        quality: 100,
       );
       return compressedFile;
     } else {
@@ -781,7 +798,11 @@ class _DashboardState extends State<Dashboard> {
                             } else if (subCategories != null) {
                               if (subCategories.any((e) =>
                                   e.subCatType.toLowerCase().trim() ==
-                                  value.toLowerCase().trim())) {
+                                      value.toLowerCase().trim() &&
+                                  e.catName.toLowerCase().trim() ==
+                                      subCategory.catName
+                                          .toLowerCase()
+                                          .trim())) {
                                 return "Sub Category already registered";
                               }
                             }

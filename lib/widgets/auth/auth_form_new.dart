@@ -172,16 +172,24 @@ class _AuthFormNewState extends State<AuthFormNew>
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  if (companyDetails[0].logoImageUrl != null)
-                    CircleAvatar(
-                      radius: 80,
-                      backgroundColor: Colors.grey,
-                      backgroundImage: companyDetails[0].logoImageUrl != null
-                          ? NetworkImage(companyDetails[0].logoImageUrl)
-                          : AssetImage('assets/icon/blrber_logo_text.png'),
-                    ),
+                  companyDetails[0].logoImageUrl != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(100),
+                          child: FadeInImage.assetNetwork(
+                              fit: BoxFit.fill,
+                              width: 200,
+                              height: 200,
+                              placeholder: 'assets/images/image_loading.gif',
+                              image: companyDetails[0].logoImageUrl),
+                        )
+                      : CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Colors.grey,
+                          backgroundImage: AssetImage(
+                              'assets/app_icon_splash_original/blrber_search_splash.jpg'),
+                        ),
                   Padding(
-                    padding: EdgeInsets.all(16),
+                    padding: EdgeInsets.all(10),
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -424,7 +432,7 @@ class _AuthFormNewState extends State<AuthFormNew>
                                   bScaffoldBackgroundColor),
                               backgroundColor: bPrimaryColor,
                             ),
-                          const SizedBox(height: 12),
+                          // const SizedBox(height: 5),
                           // if (isLoading)
                           //   CircularProgressIndicator(
                           //     // valueColor: animationController.drive(ColorTween(
@@ -468,7 +476,7 @@ class _AuthFormNewState extends State<AuthFormNew>
                                 });
                               },
                             ),
-                          const SizedBox(height: 12),
+                          // const SizedBox(height: 5),
                           if (_isLogin)
                             SignInButton(
                               Buttons.GoogleDark,

@@ -354,12 +354,13 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
   String userId = "";
   UserDetail userData = UserDetail();
   bool _isInitialLoad = false;
+  bool _isInitialDataLoad = false;
 
   @override
   void initState() {
     _selectedCategory = widget.catName;
     _selectedSubCategory = widget.subCatType;
-    print('_selectedSubCategory - $_selectedSubCategory');
+
     if (_selectedCategory == 'Vehicle') {
       _vehicleCategory = true;
     } else {
@@ -401,7 +402,23 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
       _countryCode = getCurrentLocation.countryCode;
     }
 
-    products = Provider.of<List<Product>>(context);
+    // products = Provider.of<List<Product>>(context);
+    // categories = Provider.of<List<Category>>(context);
+    // subCategories = Provider.of<List<SubCategory>>(context);
+    // ctmSpecialInfos = Provider.of<List<CtmSpecialInfo>>(context);
+    // if (products.length > 0 &&
+    //     categories.length > 0 &&
+    //     subCategories.length > 0 &&
+    //     ctmSpecialInfos.length > 0) {
+    //   print("true initial check");
+    //   _isInitialLoad = true;
+    // } else {
+    //   _isInitialLoad = false;
+    // }
+
+    // if (products == null && categories == null) {
+    _getData();
+    // }
     if (products != null) {
       products = products
           .where((e) =>
@@ -410,6 +427,14 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
               e.countryCode == _countryCode)
           .toList();
     }
+
+    _buildCatNameCount();
+    _buildSubCatNameCount();
+    super.didChangeDependencies();
+  }
+
+  void _getData() {
+    products = Provider.of<List<Product>>(context);
     categories = Provider.of<List<Category>>(context);
     subCategories = Provider.of<List<SubCategory>>(context);
     ctmSpecialInfos = Provider.of<List<CtmSpecialInfo>>(context);
@@ -417,14 +442,10 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
         categories.length > 0 &&
         subCategories.length > 0 &&
         ctmSpecialInfos.length > 0) {
-      _isInitialLoad = true;
+      _isInitialDataLoad = true;
     } else {
-      _isInitialLoad = false;
+      _isInitialDataLoad = false;
     }
-
-    _buildCatNameCount();
-    _buildSubCatNameCount();
-    super.didChangeDependencies();
   }
 
   void _buildCatNameCount() {
@@ -1480,6 +1501,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
         productsPro = productsQueryMake;
 
         queriedProdIdPro = queriedProdIdMake;
+
         if (_selectedCategory.trim() == 'Vehicle'.trim() &&
             !_selectedSubCategory.contains('Accessories') &&
             !_selectedSubCategory.contains('Others')) {
@@ -1525,6 +1547,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
       setState(() {
         productsPro = productsQueryModel;
         queriedProdIdPro = queriedProdIdModel;
+
         if (_selectedCategory.trim() == 'Vehicle'.trim() &&
             !_selectedSubCategory.contains('Accessories') &&
             !_selectedSubCategory.contains('Others')) {
@@ -2027,6 +2050,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
       setState(() {
         productsPro = productsQueryListingStatus;
         queriedProdIdPro = queriedProdIdListingStatus;
+
         if (_selectedCategory.trim() == 'Vehicle'.trim() &&
             !_selectedSubCategory.contains('Accessories') &&
             !_selectedSubCategory.contains('Others')) {
@@ -2080,6 +2104,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
       setState(() {
         productsPro = productsQueryProdCondition;
         queriedProdIdPro = queriedProdIdProdCondition;
+
         if (_selectedCategory.trim() == 'Vehicle'.trim() &&
             !_selectedSubCategory.contains('Accessories') &&
             !_selectedSubCategory.contains('Others')) {
@@ -2232,6 +2257,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
       setState(() {
         productsPro = productsQueryYear;
         queriedProdIdPro = queriedProdIdYear;
+
         if (_selectedCategory.trim() == 'Vehicle'.trim() &&
             !_selectedSubCategory.contains('Accessories') &&
             !_selectedSubCategory.contains('Others')) {
@@ -2251,8 +2277,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isInitialLoad) {
-      print('inital one time load');
+    if (_isInitialLoad && _isInitialDataLoad) {
       // if (products.length > 0) {
       _buildCatWiseQueryData(_selectedCategory, _selectedSubCategory);
       _isInitialLoad = false;
@@ -2324,8 +2349,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                               _vehicleCategory = false;
                             }
                           });
-                          print(
-                              'select category - $_selectedCategory, $_selectedSubCategory');
+
                           _buildSubCatNameCount();
                           _buildCatWiseQueryData(
                               _selectedCategory, _selectedSubCategory);
@@ -2373,6 +2397,16 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                             } else {
                               _specialVehicle = false;
                             }
+
+                            // Clear Price and Year when change in sub category
+                            _controllerMinPrice.clear();
+                            _controllerMaxPrice.clear();
+                            _controllerMinYear.clear();
+                            _controllerMaxYear.clear();
+                            minPrice = "";
+                            maxPrice = "";
+                            minYear = "";
+                            maxYear = "";
                           });
                           // _buildSubCatNameCount();
                           _buildCatWiseQueryData(
@@ -2415,7 +2449,6 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                           : bPrimaryColor),
                   onPressed: () {
                     if (queriedProdIdPro.length > 0) {
-                      print("queriedProdIdPro - ${queriedProdIdPro.length}");
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -2548,7 +2581,7 @@ class _MotorFilterScreenState extends State<MotorFilterScreen> {
                 ),
               ),
               subtitle: minPrice.isNotEmpty
-                  ? minYear == '1'
+                  ? minPrice == '1'
                       ? Text('<= $maxPrice')
                       : maxPrice == '99999999'
                           ? Text('>= $minPrice')

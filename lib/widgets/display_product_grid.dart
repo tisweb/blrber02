@@ -1,4 +1,5 @@
 //Imports for pubspec Packages
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
@@ -224,11 +225,15 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
           }
         }
 
-        availableProdSC.sort((a, b) {
-          var aSubCatType = a.subCatType;
-          var bSubCatType = b.subCatType;
-          return bSubCatType.compareTo(aSubCatType);
-        });
+        if (availableProdSC.length > 0) {
+          print("availableProdSC - ${availableProdSC[0].catName}");
+
+          availableProdSC.sort((a, b) {
+            var aSubCatType = a.subCatType;
+            var bSubCatType = b.subCatType;
+            return bSubCatType.compareTo(aSubCatType);
+          });
+        }
 
         for (var i = 0; i < products.length; i++) {
           double distanceD = Geolocator.distanceBetween(
@@ -473,7 +478,7 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                               ),
                             ),
                           Flexible(
-                            flex: 5,
+                            flex: 6,
                             child: Padding(
                               padding: const EdgeInsets.only(top: 10, left: 10),
                               child: ListView.builder(
@@ -489,24 +494,52 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                       child: Column(
                                         children: [
                                           Expanded(
-                                            flex: 1,
-                                            child: CircleAvatar(
-                                              radius: 30,
-                                              backgroundImage:
-                                                  availableProdSC[s].imageUrl ==
-                                                              "" ||
-                                                          availableProdSC[s]
-                                                                  .imageUrl ==
-                                                              null
-                                                      ? AssetImage(
-                                                          'assets/images/default_user_image.png',
-                                                        )
-                                                      : NetworkImage(
-                                                          availableProdSC[s]
-                                                              .imageUrl,
-                                                        ),
-                                            ),
-                                          ),
+                                              flex: 1,
+                                              child: ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                        100.0),
+                                                child:
+                                                    // FadeInImage.assetNetwork(
+                                                    //   fit: BoxFit.fill,
+                                                    //   width: 50,
+                                                    //   height: 50,
+                                                    //   placeholder:
+                                                    //       'assets/images/default_user_image.png',
+                                                    //   image: availableProdSC[s]
+                                                    //       .imageUrl,
+                                                    // ),
+
+                                                    availableProdSC[s]
+                                                                    .imageUrl ==
+                                                                "" ||
+                                                            availableProdSC[s]
+                                                                    .imageUrl ==
+                                                                null
+                                                        ? CircleAvatar(
+                                                            radius: 30,
+                                                            backgroundImage:
+                                                                AssetImage(
+                                                              'assets/images/default_user_image.png',
+                                                            ))
+                                                        : CachedNetworkImage(
+                                                            fit: BoxFit.fill,
+                                                            height: 50,
+                                                            width: 50,
+                                                            imageUrl:
+                                                                availableProdSC[
+                                                                        s]
+                                                                    .imageUrl,
+                                                            placeholder: (context,
+                                                                    url) =>
+                                                                CircularProgressIndicator(),
+                                                            errorWidget:
+                                                                (context, url,
+                                                                        error) =>
+                                                                    Icon(Icons
+                                                                        .error),
+                                                          ),
+                                              )),
                                           Expanded(
                                             flex: 1,
                                             child: Text(
@@ -566,12 +599,20 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                         heightFactor:
                                             1.0, // height w.r.t to parent
                                         child: ClipRRect(
-                                          child: Image(
-                                            image: NetworkImage(
-                                              products[j].imageUrlFeatured,
-                                            ),
+                                          child: FadeInImage.assetNetwork(
                                             fit: BoxFit.fill,
+                                            width: 50,
+                                            height: 50,
+                                            placeholder:
+                                                'assets/images/image_loading.gif',
+                                            image: products[j].imageUrlFeatured,
                                           ),
+                                          // Image(
+                                          //   image: NetworkImage(
+                                          //     products[j].imageUrlFeatured,
+                                          //   ),
+                                          //   fit: BoxFit.fill,
+                                          // ),
                                         ),
                                       ),
                                       Positioned(
@@ -650,7 +691,7 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                                 style: TextStyle(
                                                     color: Theme.of(context)
                                                         .disabledColor,
-                                                    fontSize: 17,
+                                                    fontSize: 15,
                                                     fontWeight:
                                                         FontWeight.bold),
                                               ),
@@ -665,7 +706,7 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                                     : products[j].prodName,
                                                 style: const TextStyle(
                                                     color: bDisabledColor,
-                                                    fontSize: 17,
+                                                    fontSize: 15,
                                                     fontWeight:
                                                         FontWeight.bold),
                                               ),
@@ -708,7 +749,7 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                               style: const TextStyle(
                                                 color: bDisabledColor,
                                                 fontSize: 15,
-                                                fontWeight: FontWeight.bold,
+                                                fontWeight: FontWeight.normal,
                                               ),
                                               children: [
                                                 TextSpan(

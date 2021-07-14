@@ -187,8 +187,8 @@ class _AuthFormState extends State<AuthForm> with TickerProviderStateMixin {
                     const CircleAvatar(
                       radius: 80,
                       backgroundColor: Colors.grey,
-                      backgroundImage:
-                          AssetImage('assets/icon/blrber_logo_text.png'),
+                      backgroundImage: AssetImage(
+                          'assets/app_icon_splash_original/blrber_search_splash.jpg'),
                     ),
                   Padding(
                     padding: EdgeInsets.all(16),

@@ -233,7 +233,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _deleteReceivedMsgCountTo();
 
       if (userDataUpdated.providerId == "google.com") {
-        await googleSignIn.disconnect();
+        // await googleSignIn.disconnect();
+        await googleSignIn.signOut();
       }
       FirebaseAuth.instance.signOut();
 
@@ -613,8 +614,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // ),
               ElevatedButton(
                 onPressed: () async {
-                  await googleSignIn.disconnect();
+                  print("check signout1");
+                  if (userDataUpdated.providerId == "google.com") {
+                    await googleSignIn.signOut();
+                  }
+                  print("check signout2");
                   FirebaseAuth.instance.signOut();
+                  print("check signout3");
                   Navigator.of(context).pop();
                 },
                 child: const Text(
