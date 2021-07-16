@@ -149,24 +149,35 @@ class _TabsScreenState extends State<TabsScreen> {
                 }
                 return Stack(
                   children: [
-                    const Icon(Icons.chat),
+                    const Icon(
+                      Icons.chat,
+                    ),
                     if (totalNewMsgCount > 0)
                       Positioned(
-                        left: 0,
-                        top: 0,
-                        child: Container(
-                          height: 22,
-                          width: 22,
-                          child: Badge(
-                            badgeContent: Text(
-                              totalNewMsgCount.toString(),
-                              style: TextStyle(
-                                  color: bBackgroundColor, fontSize: 9),
-                            ),
-                            badgeColor: Colors.red,
-                          ),
-                        ),
-                      )
+                          right: 0,
+                          top: 0,
+                          child: Icon(
+                            Icons.notifications,
+                            color: Colors.red,
+                            size: 20,
+                          ))
+                    // Positioned(
+                    //   left: 0,
+                    //   top: 0,
+                    //   child: Container(
+                    //     height: 22,
+                    //     width: 22,
+                    //     child: Badge(
+                    //       child: Icon(Icons.notifications),
+                    //       // badgeContent: Text(
+                    //       //   totalNewMsgCount.toString(),
+                    //       //   style: TextStyle(
+                    //       //       color: bBackgroundColor, fontSize: 9),
+                    //       // ),
+                    //       // badgeColor: Colors.red,
+                    //     ),
+                    //   ),
+                    // )
                   ],
                 );
               } else {

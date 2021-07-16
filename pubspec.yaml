@@ -90,7 +90,7 @@ dev_dependencies:
 
 flutter_native_splash:
   color: "#FE0000"
-  image: "assets/app_icon_splash_original/welcomepage.jpg"
+  image: "assets/app_icon_splash_original/welcomepageshortb.jpg"
   android: true
   ios: true
   # android_gravity: fill
@@ -99,7 +99,7 @@ flutter_native_splash:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/app_icon/orangeiconsmall2.jpg"    
+  image_path: "assets/app_icon/blrber_search_icon_newS.png"    
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -117,6 +117,7 @@ flutter:
     - assets/
     - assets/images/default_user_image.png
     - assets/images/image_loading.gif
+    - assets/app_icon_splash_original/blrber_logo_authform.png
     
    
   #   - images/a_dot_burr.jpeg

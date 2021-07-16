@@ -188,7 +188,7 @@ class _AuthFormState extends State<AuthForm> with TickerProviderStateMixin {
                       radius: 80,
                       backgroundColor: Colors.grey,
                       backgroundImage: AssetImage(
-                          'assets/app_icon_splash_original/blrber_search_splash.jpg'),
+                          'assets/app_icon_splash_original/welcomepageshortb.jpg'),
                     ),
                   Padding(
                     padding: EdgeInsets.all(16),

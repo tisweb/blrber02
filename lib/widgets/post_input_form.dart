@@ -2374,7 +2374,7 @@ class _PostInputFormState extends State<PostInputForm>
                 components: _countryCode,
                 placeType: smp.PlaceType.address,
                 onSelected: (place) async {
-                  print(place);
+                  print('place - ${place.description}');
                   setState(() {
                     _addressLocation = '';
                     _latitude = 0.0;
@@ -2443,15 +2443,15 @@ class _PostInputFormState extends State<PostInputForm>
                         );
                       }
                       if (_specialVehicle) {
-                        if (motorFormSqlDb.vehicleTypeYear == "CTA1981" &&
-                            !_vinValidateFlag) {
-                          _validate = false;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: const Text('Please validate VIN!'),
-                            ),
-                          );
-                        }
+                        // if (motorFormSqlDb.vehicleTypeYear == "CTA1981" &&
+                        //     !_vinValidateFlag) {
+                        //   _validate = false;
+                        //   ScaffoldMessenger.of(context).showSnackBar(
+                        //     const SnackBar(
+                        //       content: const Text('Please validate VIN!'),
+                        //     ),
+                        //   );
+                        // }
                         if (_currentStep > 1) {
                           if (motorFormSqlDb.exteriorColor == null) {
                             _validate = false;
@@ -2646,21 +2646,22 @@ class _PostInputFormState extends State<PostInputForm>
           height: 10,
         ),
         if (motorFormSqlDb.vehicleTypeYear == 'CTA1981' && _specialVehicle)
-          OutlineButton(
-            shape: StadiumBorder(),
-            textColor: Colors.blue,
-            child: const Text('Validate VIN'),
-            borderSide: const BorderSide(
-                color: Colors.grey, style: BorderStyle.solid, width: 1),
-            onPressed: () async {
-              _vinValidateFlag = false;
-              await _validateVIN(motorFormSqlDb.vin).then((value) {
-                setState(() {
-                  _vinValidateFlag = true;
+          if (_enableVinValButton)
+            OutlineButton(
+              shape: StadiumBorder(),
+              textColor: Colors.blue,
+              child: const Text('Validate VIN'),
+              borderSide: const BorderSide(
+                  color: Colors.grey, style: BorderStyle.solid, width: 1),
+              onPressed: () async {
+                _vinValidateFlag = false;
+                await _validateVIN(motorFormSqlDb.vin).then((value) {
+                  setState(() {
+                    _vinValidateFlag = true;
+                  });
                 });
-              });
-            },
-          ),
+              },
+            ),
         const SizedBox(
           height: 10,
         ),
@@ -3874,18 +3875,15 @@ class _PostInputFormState extends State<PostInputForm>
 
     var year = vin.getYear().toString();
     if (year != null) {
-      print("Year is $year");
       setState(() {
         motorFormSqlDb.year = year;
       });
       await _updateMotorForm(motorFormSqlDb.id, 'year', motorFormSqlDb.year);
     }
-    print("Region is " + vin.getRegion());
-    print("VIN string is " + vin.toString());
 
     // The following calls are to the NHTSA DB, and are carried out asynchronously
     var make = await vin.getMakeAsync();
-    print("Make is $make");
+
     if (make != null) {
       setState(() {
         motorFormSqlDb.make = make;
@@ -3894,7 +3892,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var model = await vin.getModelAsync();
-    print("Model is $model");
+
     if (model != null) {
       setState(() {
         motorFormSqlDb.model = model;
@@ -3903,7 +3901,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var vehicleType = await vin.getVehicleTypeAsync();
-    print("Type is $vehicleType");
+
     if (vehicleType != null) {
       setState(() {
         motorFormSqlDb.vehicleType = vehicleType;
@@ -3913,7 +3911,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var numberOfCylinders = await vin.getEngineNumberofCylindersAsync();
-    print("EngineNumber of Cylinders is $numberOfCylinders");
+
     if (numberOfCylinders != null) {
       setState(() {
         motorFormSqlDb.numberOfCylinders = numberOfCylinders;
@@ -3923,7 +3921,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var safetyFeatures = await vin.getActiveSafetySystemNoteAsync();
-    print("Active Safety SystemNote is $safetyFeatures");
+
     if (safetyFeatures != null) {
       setState(() {
         motorFormSqlDb.safetyFeatures = safetyFeatures;
@@ -3933,7 +3931,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var transmission = await vin.getTransmissionStyleAsync();
-    print("Transmission Style is $transmission");
+
     if (transmission != null) {
       setState(() {
         motorFormSqlDb.transmission = transmission;
@@ -3943,7 +3941,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var steeringLocation = await vin.getSteeringLocationAsync();
-    print("Steering Location is $steeringLocation");
+
     if (steeringLocation != null) {
       setState(() {
         motorFormSqlDb.steeringLocation = steeringLocation;
@@ -3953,7 +3951,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var fuelType = await vin.getFuelTypePrimaryAsync();
-    print("Fuel Type Primary is $fuelType");
+
     if (fuelType != null) {
       setState(() {
         motorFormSqlDb.fuelType = fuelType;
@@ -3963,7 +3961,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var trim = await vin.getTrimAsync();
-    print("Trim is $trim");
+
     if (trim != null) {
       setState(() {
         motorFormSqlDb.trim = trim;
@@ -3972,7 +3970,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var driveType = await vin.getDriveTypeAsync();
-    print("Drive Type is $driveType");
+
     if (driveType != null) {
       setState(() {
         motorFormSqlDb.driveType = driveType;
@@ -3982,7 +3980,7 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var bodyType = await vin.getBodyTypeAsync();
-    print("Body Type is $bodyType");
+
     if (bodyType != null) {
       setState(() {
         motorFormSqlDb.bodyType = bodyType;
@@ -3992,19 +3990,19 @@ class _PostInputFormState extends State<PostInputForm>
     }
 
     var displacementL = await vin.getDisplacementLAsync();
-    print("Displacement (L) is $displacementL");
 
-    String disp = double.parse(displacementL).toStringAsFixed(1);
-    if (disp != null && fuelType != null) {
-      var engine = ("$disp L $fuelType").toString();
-      print("Engine is $engine");
+    if (displacementL != null) {
+      String disp = double.parse(displacementL).toStringAsFixed(1);
+      if (disp != null && fuelType != null) {
+        var engine = ("$disp L $fuelType").toString();
 
-      if (engine != null) {
-        setState(() {
-          motorFormSqlDb.engine = engine;
-        });
-        await _updateMotorForm(
-            motorFormSqlDb.id, 'engine', motorFormSqlDb.engine);
+        if (engine != null) {
+          setState(() {
+            motorFormSqlDb.engine = engine;
+          });
+          await _updateMotorForm(
+              motorFormSqlDb.id, 'engine', motorFormSqlDb.engine);
+        }
       }
     }
 

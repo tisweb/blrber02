@@ -226,8 +226,6 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
         }
 
         if (availableProdSC.length > 0) {
-          print("availableProdSC - ${availableProdSC[0].catName}");
-
           availableProdSC.sort((a, b) {
             var aSubCatType = a.subCatType;
             var bSubCatType = b.subCatType;
@@ -289,7 +287,7 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
         products.sort((a, b) {
           var aDistance = a.distance;
           var bDistance = b.distance;
-          return aDistance.compareTo(bDistance);
+          return bDistance.compareTo(aDistance);
         });
       }
     }
@@ -494,52 +492,46 @@ class _DisplayProductGridState extends State<DisplayProductGrid> {
                                       child: Column(
                                         children: [
                                           Expanded(
-                                              flex: 1,
-                                              child: ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                        100.0),
-                                                child:
-                                                    // FadeInImage.assetNetwork(
-                                                    //   fit: BoxFit.fill,
-                                                    //   width: 50,
-                                                    //   height: 50,
-                                                    //   placeholder:
-                                                    //       'assets/images/default_user_image.png',
-                                                    //   image: availableProdSC[s]
-                                                    //       .imageUrl,
-                                                    // ),
-
+                                            flex: 1,
+                                            child: availableProdSC[s]
+                                                            .imageUrl ==
+                                                        "" ||
                                                     availableProdSC[s]
-                                                                    .imageUrl ==
-                                                                "" ||
+                                                            .imageUrl ==
+                                                        null
+                                                ? CircleAvatar(
+                                                    radius: 30,
+                                                    backgroundImage: AssetImage(
+                                                      'assets/images/default_user_image.png',
+                                                    ),
+                                                  )
+                                                : Container(
+                                                    height: 80,
+                                                    width: 80,
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      color: bBackgroundColor,
+                                                      image: DecorationImage(
+                                                        image: NetworkImage(
                                                             availableProdSC[s]
-                                                                    .imageUrl ==
-                                                                null
-                                                        ? CircleAvatar(
-                                                            radius: 30,
-                                                            backgroundImage:
-                                                                AssetImage(
-                                                              'assets/images/default_user_image.png',
-                                                            ))
-                                                        : CachedNetworkImage(
-                                                            fit: BoxFit.fill,
-                                                            height: 50,
-                                                            width: 50,
-                                                            imageUrl:
-                                                                availableProdSC[
-                                                                        s]
-                                                                    .imageUrl,
-                                                            placeholder: (context,
-                                                                    url) =>
-                                                                CircularProgressIndicator(),
-                                                            errorWidget:
-                                                                (context, url,
-                                                                        error) =>
-                                                                    Icon(Icons
-                                                                        .error),
-                                                          ),
-                                              )),
+                                                                .imageUrl),
+                                                      ),
+                                                    )
+
+                                                    // child: CachedNetworkImage(
+                                                    //   fit: BoxFit.cover,
+                                                    //   imageUrl:
+                                                    //       availableProdSC[s]
+                                                    //           .imageUrl,
+                                                    //   placeholder: (context,
+                                                    //           url) =>
+                                                    //       CircularProgressIndicator(),
+                                                    //   errorWidget: (context,
+                                                    //           url, error) =>
+                                                    //       Icon(Icons.error),
+                                                    // ),
+                                                    ),
+                                          ),
                                           Expanded(
                                             flex: 1,
                                             child: Text(

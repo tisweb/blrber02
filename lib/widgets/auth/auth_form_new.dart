@@ -166,6 +166,10 @@ class _AuthFormNewState extends State<AuthFormNew>
       _isVerifiedEmail = "";
       submitValid = false;
     }
+    if (companyDetails.length > 0) {
+      // print(
+      //     "companyDetails[0].logoImageUrl - ${companyDetails[0].logoImageUrl.toString()}");
+    }
 
     return companyDetails.length > 0
         ? Container(
@@ -176,17 +180,17 @@ class _AuthFormNewState extends State<AuthFormNew>
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(100),
                           child: FadeInImage.assetNetwork(
-                              fit: BoxFit.fill,
-                              width: 200,
-                              height: 200,
+                              fit: BoxFit.cover,
+                              width: 350,
+                              height: 350,
                               placeholder: 'assets/images/image_loading.gif',
                               image: companyDetails[0].logoImageUrl),
                         )
                       : CircleAvatar(
-                          radius: 30,
+                          radius: 80,
                           backgroundColor: Colors.grey,
                           backgroundImage: AssetImage(
-                              'assets/app_icon_splash_original/blrber_search_splash.jpg'),
+                              'assets/app_icon_splash_original/blrber_logo_authform.png'),
                         ),
                   Padding(
                     padding: EdgeInsets.all(10),

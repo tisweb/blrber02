@@ -178,8 +178,6 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
               e.model != "Others")
           .toList();
 
-      print("similarlisting - ${similarlisting.length}");
-
       userDetails = userDetails
           .where((e) =>
               e.userDetailDocId.trim() == products[0].userDetailDocId.trim())
@@ -452,23 +450,27 @@ class _ProductDetailItemState extends State<ProductDetailItem> {
                                 alignment: PlaceholderAlignment.middle,
                               ),
                             ),
-                            TextButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) {
-                                          return GMapScreen(
-                                            lat: products[0].latitude,
-                                            long: products[0].longitude,
-                                            addressLocation:
-                                                products[0].addressLocation,
-                                          );
-                                        },
-                                        fullscreenDialog: true),
-                                  );
-                                },
-                                child: Text(products[0].addressLocation))
+                            Flexible(
+                              flex: 1,
+                              child: TextButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) {
+                                            return GMapScreen(
+                                              lat: products[0].latitude,
+                                              long: products[0].longitude,
+                                              addressLocation:
+                                                  products[0].addressLocation,
+                                            );
+                                          },
+                                          fullscreenDialog: true),
+                                    );
+                                  },
+                                  child: Text(products[0].addressLocation,
+                                      overflow: TextOverflow.ellipsis)),
+                            )
                           ],
                         ),
                       ),

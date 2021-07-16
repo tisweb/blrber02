@@ -76,7 +76,7 @@ class GetCurrentLocation extends ChangeNotifier {
         await Geocoder.local.findAddressesFromCoordinates(cPCoordinates);
     final first = address.first;
 
-    addressLocation = "${first.subLocality}, ${first.locality}";
+    addressLocation = "${first.addressLine}";
     coordinates = cPCoordinates.toString();
     latitude = cPosition.latitude;
     longitude = cPosition.longitude;
@@ -98,7 +98,7 @@ class GetCurrentLocation extends ChangeNotifier {
     final address =
         await Geocoder.local.findAddressesFromCoordinates(sPcoordinates);
     final first = address.first;
-    addressLocation = "${first.subLocality}, ${first.locality}";
+    addressLocation = "${first.addressLine}";
     coordinates = sPcoordinates.toString();
     latitude = latLng.latitude;
     longitude = latLng.longitude;
