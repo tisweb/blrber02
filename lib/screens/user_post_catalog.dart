@@ -104,32 +104,36 @@ class _UserPostCatalogState extends State<UserPostCatalog> {
               ),
               Column(
                 children: [
-                  RichText(
-                    text: TextSpan(
-                      text: 'User Name  ',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      children: <TextSpan>[
-                        TextSpan(text: widget.userData.userName),
-                      ],
-                    ),
-                  ),
-                  RichText(
-                    text: TextSpan(
-                      text: 'User Type  ',
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      children: <TextSpan>[
-                        TextSpan(text: widget.userData.userType),
-                      ],
-                    ),
-                  ),
+                  // RichText(
+                  //   text: TextSpan(
+                  //     text: 'User Name  ',
+                  //     style: TextStyle(
+                  //       color: Colors.black,
+                  //       fontSize: 15,
+                  //       fontWeight: FontWeight.bold,
+                  //     ),
+                  //     children: <TextSpan>[
+                  //       TextSpan(text: widget.userData.userName),
+                  //     ],
+                  //   ),
+                  // ),
+                  // RichText(
+                  //   text: TextSpan(
+                  //     text: 'User Type  ',
+                  //     style: const TextStyle(
+                  //       color: Colors.black,
+                  //       fontSize: 15,
+                  //       fontWeight: FontWeight.bold,
+                  //     ),
+                  //     children: <TextSpan>[
+                  //       TextSpan(text: widget.userData.userType),
+                  //     ],
+                  //   ),
+                  // ),
+                  Text(widget.userData.userName,
+                      overflow: TextOverflow.ellipsis),
+                  Text(widget.userData.userType,
+                      overflow: TextOverflow.ellipsis),
                   if (widget.userData.userType == 'Dealer')
                     Column(
                       children: [

@@ -2443,15 +2443,15 @@ class _PostInputFormState extends State<PostInputForm>
                         );
                       }
                       if (_specialVehicle) {
-                        // if (motorFormSqlDb.vehicleTypeYear == "CTA1981" &&
-                        //     !_vinValidateFlag) {
-                        //   _validate = false;
-                        //   ScaffoldMessenger.of(context).showSnackBar(
-                        //     const SnackBar(
-                        //       content: const Text('Please validate VIN!'),
-                        //     ),
-                        //   );
-                        // }
+                        if (motorFormSqlDb.vehicleTypeYear == "CTA1981" &&
+                            !_vinValidateFlag) {
+                          _validate = false;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: const Text('Please validate VIN!'),
+                            ),
+                          );
+                        }
                         if (_currentStep > 1) {
                           if (motorFormSqlDb.exteriorColor == null) {
                             _validate = false;

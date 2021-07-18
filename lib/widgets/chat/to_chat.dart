@@ -14,6 +14,7 @@ class ToChat extends StatefulWidget {
 class _ToChatState extends State<ToChat> {
   String userNameFrom = "";
   String userNameTo = "";
+  String imageUrlTo = "";
 
   @override
   void initState() {
@@ -47,6 +48,7 @@ class _ToChatState extends State<ToChat> {
       print('user there ${userDataTo['userName']}');
       setState(() {
         userNameTo = userDataTo['userName'];
+        imageUrlTo = userDataTo["userImageUrl"];
       });
     }
   }
@@ -60,6 +62,7 @@ class _ToChatState extends State<ToChat> {
         userIdFrom: widget.userIdFrom,
         userIdTo: widget.userIdTo,
         prodName: widget.prodName,
+        imageUrlTo: imageUrlTo,
       ),
     );
   }

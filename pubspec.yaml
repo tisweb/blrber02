@@ -48,7 +48,7 @@ dependencies:
   geolocator: ^6.2.1
   google_maps_flutter: ^0.5.13
   search_map_place: ^0.3.0
-  google_ml_vision: ^0.0.5
+  # google_ml_vision: ^0.0.5 // This package leads to increase app size about 40MB
 
   # ML Plugins
   tflite: ^1.1.1

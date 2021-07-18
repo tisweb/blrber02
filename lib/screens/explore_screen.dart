@@ -9,7 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flag/flag.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:google_ml_vision/google_ml_vision.dart';
+// import 'package:google_ml_vision/google_ml_vision.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tflite/tflite.dart';
@@ -93,14 +93,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
     });
 
     if (pickedImage != null) {
-      // runModelOnImage(); It is to run ml on tflite model
-      var prodName = await findLabels(
-          pickedImage); // It is to run ml on firebase ml vision
+      runModelOnImage(); // It is to run ml on tflite model
+      // var prodName = await findLabels(
+      //     pickedImage); // It is to run ml on firebase ml vision
 
-      if (prodName != "") {
-        Navigator.of(context)
-            .pushNamed(SearchResults.routeName, arguments: prodName);
-      }
+      // if (prodName != "") {
+      //   Navigator.of(context)
+      //       .pushNamed(SearchResults.routeName, arguments: prodName);
+      // }
     }
   }
 
@@ -113,47 +113,57 @@ class _ExploreScreenState extends State<ExploreScreen> {
       threshold: 0.8,
     );
 
-    setState(() {
-      _output = output;
+    // setState(() {
+    _output = output;
+    if (output.length > 0) {
       imageLabel = _output[0]["label"];
 
-      var imageLabelOut =
-          imageLabel.split(",")[0] + " " + imageLabel.split(",")[1];
+      // var imageLabelOut =
+      //     imageLabel.split(",")[0] + "-" + imageLabel.split(",")[1];
+
+      var imageLabelOut = imageLabel.split(",")[1];
 
       if (imageLabelOut != "") {
         Navigator.of(context)
             .pushNamed(SearchResults.routeName, arguments: imageLabelOut);
       }
-    });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Product Not found'),
+        ),
+      );
+    }
+    // });
   }
 
-  Future<String> findLabels(File _image) async {
-    List<ImageLabelInfo> _imageLabels = [];
-    final GoogleVisionImage visionImage = GoogleVisionImage.fromFile(_image);
+  // Future<String> findLabels(File _image) async {
+  //   List<ImageLabelInfo> _imageLabels = [];
+  //   final GoogleVisionImage visionImage = GoogleVisionImage.fromFile(_image);
 
-    final ImageLabeler labeler = GoogleVision.instance
-        .imageLabeler(ImageLabelerOptions(confidenceThreshold: 0.80));
+  //   final ImageLabeler labeler = GoogleVision.instance
+  //       .imageLabeler(ImageLabelerOptions(confidenceThreshold: 0.80));
 
-    final List<ImageLabel> labels = await labeler.processImage(visionImage);
+  //   final List<ImageLabel> labels = await labeler.processImage(visionImage);
 
-    for (ImageLabel label in labels) {
-      ImageLabelInfo _imageLabel = ImageLabelInfo();
-      _imageLabel.imageLabel = label.text;
-      _imageLabel.confidence = label.confidence;
+  //   for (ImageLabel label in labels) {
+  //     ImageLabelInfo _imageLabel = ImageLabelInfo();
+  //     _imageLabel.imageLabel = label.text;
+  //     _imageLabel.confidence = label.confidence;
 
-      _imageLabels.add(_imageLabel);
-    }
+  //     _imageLabels.add(_imageLabel);
+  //   }
 
-    if (_imageLabels.length > 0) {
-      _imageLabels.sort((a, b) {
-        var aConfidence = a.confidence;
-        var bConfidence = b.confidence;
-        return aConfidence.compareTo(bConfidence);
-      });
-    }
+  //   if (_imageLabels.length > 0) {
+  //     _imageLabels.sort((a, b) {
+  //       var aConfidence = a.confidence;
+  //       var bConfidence = b.confidence;
+  //       return aConfidence.compareTo(bConfidence);
+  //     });
+  //   }
 
-    return _imageLabels[_imageLabels.length - 1].imageLabel;
-  }
+  //   return _imageLabels[_imageLabels.length - 1].imageLabel;
+  // }
 
   @override
   void didChangeDependencies() async {
@@ -626,40 +636,41 @@ class ItemsSearch extends SearchDelegate<String> {
     pickedImage = File(imageFile.path);
 
     if (pickedImage != null) {
-      // prodName = await runModelOnImageS(); // It is to run with tflite model
-      prodName = await findLabels(
-          pickedImage); // It is to run with google ml vision model
+      prodName = await runModelOnImageS(); // It is to run with tflite model
+      // prodName = await findLabels(
+      //     pickedImage); // It is to run with google ml vision model
     }
+
     return prodName;
   }
 
-  Future<String> findLabels(File _image) async {
-    List<ImageLabelInfo> _imageLabels = [];
-    final GoogleVisionImage visionImage = GoogleVisionImage.fromFile(_image);
+  // Future<String> findLabels(File _image) async {
+  //   List<ImageLabelInfo> _imageLabels = [];
+  //   final GoogleVisionImage visionImage = GoogleVisionImage.fromFile(_image);
 
-    final ImageLabeler labeler = GoogleVision.instance
-        .imageLabeler(ImageLabelerOptions(confidenceThreshold: 0.80));
+  //   final ImageLabeler labeler = GoogleVision.instance
+  //       .imageLabeler(ImageLabelerOptions(confidenceThreshold: 0.80));
 
-    final List<ImageLabel> labels = await labeler.processImage(visionImage);
+  //   final List<ImageLabel> labels = await labeler.processImage(visionImage);
 
-    for (ImageLabel label in labels) {
-      ImageLabelInfo _imageLabel = ImageLabelInfo();
-      _imageLabel.imageLabel = label.text;
-      _imageLabel.confidence = label.confidence;
+  //   for (ImageLabel label in labels) {
+  //     ImageLabelInfo _imageLabel = ImageLabelInfo();
+  //     _imageLabel.imageLabel = label.text;
+  //     _imageLabel.confidence = label.confidence;
 
-      _imageLabels.add(_imageLabel);
-    }
+  //     _imageLabels.add(_imageLabel);
+  //   }
 
-    if (_imageLabels.length > 0) {
-      _imageLabels.sort((a, b) {
-        var aConfidence = a.confidence;
-        var bConfidence = b.confidence;
-        return aConfidence.compareTo(bConfidence);
-      });
-    }
+  //   if (_imageLabels.length > 0) {
+  //     _imageLabels.sort((a, b) {
+  //       var aConfidence = a.confidence;
+  //       var bConfidence = b.confidence;
+  //       return aConfidence.compareTo(bConfidence);
+  //     });
+  //   }
 
-    return _imageLabels[_imageLabels.length - 1].imageLabel;
-  }
+  //   return _imageLabels[_imageLabels.length - 1].imageLabel;
+  // }
 
   Future<String> runModelOnImageS() async {
     var output = await Tflite.runModelOnImage(
@@ -670,12 +681,16 @@ class ItemsSearch extends SearchDelegate<String> {
       threshold: 0.8,
     );
 
-    imageLabelS = output[0]["label"];
+    if (output.length > 0) {
+      imageLabelS = output[0]["label"];
 
-    var imageLabelOut =
-        imageLabelS.split(" ")[0] + " " + imageLabelS.split(" ")[1];
-
-    return imageLabelOut;
+      // var imageLabelOut =
+      //     imageLabelS.split(" ")[0] + " " + imageLabelS.split(" ")[1];
+      var imageLabelOut = imageLabelS.split(",")[1];
+      return imageLabelOut;
+    } else {
+      return "Not Found";
+    }
   }
 
   @override
@@ -700,9 +715,17 @@ class ItemsSearch extends SearchDelegate<String> {
         icon: Icon(Icons.camera_alt_outlined),
         onPressed: () async {
           var prodNameS = await _pickImageS();
-          query = prodNameS;
-          Navigator.of(context)
-              .pushNamed(SearchResults.routeName, arguments: query);
+          if (prodNameS != "Not Found") {
+            query = prodNameS;
+            Navigator.of(context)
+                .pushNamed(SearchResults.routeName, arguments: query);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Product Not found'),
+              ),
+            );
+          }
         },
       ),
     ];
